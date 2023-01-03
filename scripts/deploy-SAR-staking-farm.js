@@ -139,6 +139,56 @@ async function main() {
     staking.address,
   ]);
 
+  console.log("\n===============\n CONFIGURATION \n===============");
+
+  /*******************
+   * PANGOCHEF ROLES *
+   *******************/
+
+  await chef.grantRole(FUNDER_ROLE, contractAddresses.treasury_vester);
+  // await confirmTransactionCount();
+  await chef.grantRole(FUNDER_ROLE, chefFundForwarder.address);
+  // await confirmTransactionCount();
+  await chef.grantRole(FUNDER_ROLE, multisigAddress);
+  // await confirmTransactionCount();
+  await chef.grantRole(POOL_MANAGER_ROLE, multisigAddress);
+  // await confirmTransactionCount();
+  await chef.grantRole(DEFAULT_ADMIN_ROLE, multisigAddress);
+  // await confirmTransactionCount();
+  console.log("Added TreasuryVester as PangoChef funder.");
+
+  await chef.setWeights(["0"], [WETH_PNG_FARM_ALLOCATION]);
+  // await confirmTransactionCount();
+  console.log("Gave 30x weight to PNG-NATIVE_TOKEN");
+
+  await chef.renounceRole(FUNDER_ROLE, deployer.address);
+  // await confirmTransactionCount();
+  await chef.renounceRole(POOL_MANAGER_ROLE, deployer.address);
+  // await confirmTransactionCount();
+  await chef.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  // await confirmTransactionCount();
+  console.log("Transferred PangoChef ownership to Multisig.");
+
+  /************************* *
+   * STAKING POSITIONS ROLES *
+   ************************* */
+
+  await staking.grantRole(FUNDER_ROLE, contractAddresses.fee_collector);
+  // await confirmTransactionCount();
+  await staking.grantRole(FUNDER_ROLE, stakingFundForwarder.address);
+  // await confirmTransactionCount();
+  await staking.grantRole(FUNDER_ROLE, multisigAddress);
+  // await confirmTransactionCount();
+  await staking.grantRole(DEFAULT_ADMIN_ROLE, multisigAddress);
+  // await confirmTransactionCount();
+  console.log("Added FeeCollector as PangolinStakingPosition funder.");
+
+  await staking.renounceRole(FUNDER_ROLE, deployer.address);
+  // await confirmTransactionCount();
+  await staking.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
+  // await confirmTransactionCount();
+  console.log("Transferred PangolinStakingPositions ownership to Multisig.");
+
   // CHANGING VESTER ALLOCATION. (treasury, multisig, chefFundForwarder)
 
   // const oldRecipients = await vesterAllocationContract.getRecipients();
@@ -440,56 +490,6 @@ async function main() {
   console.log(
     `New reward contract: ${await feeCollectorContract.stakingRewards()}`
   );
-
-  console.log("\n===============\n CONFIGURATION \n===============");
-
-  /*******************
-   * PANGOCHEF ROLES *
-   *******************/
-
-  await chef.grantRole(FUNDER_ROLE, contractAddresses.treasury_vester);
-  // await confirmTransactionCount();
-  await chef.grantRole(FUNDER_ROLE, chefFundForwarder.address);
-  // await confirmTransactionCount();
-  await chef.grantRole(FUNDER_ROLE, multisigAddress);
-  // await confirmTransactionCount();
-  await chef.grantRole(POOL_MANAGER_ROLE, multisigAddress);
-  // await confirmTransactionCount();
-  await chef.grantRole(DEFAULT_ADMIN_ROLE, multisigAddress);
-  // await confirmTransactionCount();
-  console.log("Added TreasuryVester as PangoChef funder.");
-
-  await chef.setWeights(["0"], [WETH_PNG_FARM_ALLOCATION]);
-  // await confirmTransactionCount();
-  console.log("Gave 30x weight to PNG-NATIVE_TOKEN");
-
-  await chef.renounceRole(FUNDER_ROLE, deployer.address);
-  // await confirmTransactionCount();
-  await chef.renounceRole(POOL_MANAGER_ROLE, deployer.address);
-  // await confirmTransactionCount();
-  await chef.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
-  // await confirmTransactionCount();
-  console.log("Transferred PangoChef ownership to Multisig.");
-
-  /************************* *
-   * STAKING POSITIONS ROLES *
-   ************************* */
-
-  await staking.grantRole(FUNDER_ROLE, contractAddresses.fee_collector);
-  // await confirmTransactionCount();
-  await staking.grantRole(FUNDER_ROLE, stakingFundForwarder.address);
-  // await confirmTransactionCount();
-  await staking.grantRole(FUNDER_ROLE, multisigAddress);
-  // await confirmTransactionCount();
-  await staking.grantRole(DEFAULT_ADMIN_ROLE, multisigAddress);
-  // await confirmTransactionCount();
-  console.log("Added FeeCollector as PangolinStakingPosition funder.");
-
-  await staking.renounceRole(FUNDER_ROLE, deployer.address);
-  // await confirmTransactionCount();
-  await staking.renounceRole(DEFAULT_ADMIN_ROLE, deployer.address);
-  // await confirmTransactionCount();
-  console.log("Transferred PangolinStakingPositions ownership to Multisig.");
 }
 
 main()
