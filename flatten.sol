@@ -1,833 +1,579 @@
 // Sources flattened with hardhat v2.9.3 https://hardhat.org
 
-// File @openzeppelin/contracts/token/ERC20/IERC20.sol@v4.7.3
+// File contracts/multisig/MultiSigWalletWithDailyLimitFactory.sol
 
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)
+// File: contracts/Factory.sol
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.4.15;
 
-/**
- * @dev Interface of the ERC20 standard as defined in the EIP.
- */
-interface IERC20 {
-    /**
-     * @dev Emitted when `value` tokens are moved from one account (`from`) to
-     * another (`to`).
-     *
-     * Note that `value` may be zero.
+contract Factory {
+
+    /*
+     *  Events
      */
-    event Transfer(address indexed from, address indexed to, uint256 value);
+    event ContractInstantiation(address sender, address instantiation);
 
-    /**
-     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
-     * a call to {approve}. `value` is the new allowance.
+    /*
+     *  Storage
      */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    mapping(address => bool) public isInstantiation;
+    mapping(address => address[]) public instantiations;
 
-    /**
-     * @dev Returns the amount of tokens in existence.
+    /*
+     * Public functions
      */
-    function totalSupply() external view returns (uint256);
-
-    /**
-     * @dev Returns the amount of tokens owned by `account`.
-     */
-    function balanceOf(address account) external view returns (uint256);
-
-    /**
-     * @dev Moves `amount` tokens from the caller's account to `to`.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transfer(address to, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Returns the remaining number of tokens that `spender` will be
-     * allowed to spend on behalf of `owner` through {transferFrom}. This is
-     * zero by default.
-     *
-     * This value changes when {approve} or {transferFrom} are called.
-     */
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    /**
-     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * IMPORTANT: Beware that changing an allowance with this method brings the risk
-     * that someone may use both the old and the new allowance by unfortunate
-     * transaction ordering. One possible solution to mitigate this race
-     * condition is to first reduce the spender's allowance to 0 and set the
-     * desired value afterwards:
-     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
-     *
-     * Emits an {Approval} event.
-     */
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    /**
-     * @dev Moves `amount` tokens from `from` to `to` using the
-     * allowance mechanism. `amount` is then deducted from the caller's
-     * allowance.
-     *
-     * Returns a boolean value indicating whether the operation succeeded.
-     *
-     * Emits a {Transfer} event.
-     */
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) external returns (bool);
-}
-
-
-// File @openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol@v4.7.3
-
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/draft-IERC20Permit.sol)
-
-pragma solidity ^0.8.0;
-
-/**
- * @dev Interface of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in
- * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].
- *
- * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by
- * presenting a message signed by the account. By not relying on {IERC20-approve}, the token holder account doesn't
- * need to send a transaction, and thus is not required to hold Ether at all.
- */
-interface IERC20Permit {
-    /**
-     * @dev Sets `value` as the allowance of `spender` over ``owner``'s tokens,
-     * given ``owner``'s signed approval.
-     *
-     * IMPORTANT: The same issues {IERC20-approve} has related to transaction
-     * ordering also apply here.
-     *
-     * Emits an {Approval} event.
-     *
-     * Requirements:
-     *
-     * - `spender` cannot be the zero address.
-     * - `deadline` must be a timestamp in the future.
-     * - `v`, `r` and `s` must be a valid `secp256k1` signature from `owner`
-     * over the EIP712-formatted function arguments.
-     * - the signature must use ``owner``'s current nonce (see {nonces}).
-     *
-     * For more information on the signature format, see the
-     * https://eips.ethereum.org/EIPS/eip-2612#specification[relevant EIP
-     * section].
-     */
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
-    /**
-     * @dev Returns the current nonce for `owner`. This value must be
-     * included whenever a signature is generated for {permit}.
-     *
-     * Every successful call to {permit} increases ``owner``'s nonce by one. This
-     * prevents a signature from being used multiple times.
-     */
-    function nonces(address owner) external view returns (uint256);
-
-    /**
-     * @dev Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
-
-
-// File @openzeppelin/contracts/utils/Address.sol@v4.7.3
-
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.7.0) (utils/Address.sol)
-
-pragma solidity ^0.8.1;
-
-/**
- * @dev Collection of functions related to the address type
- */
-library Address {
-    /**
-     * @dev Returns true if `account` is a contract.
-     *
-     * [IMPORTANT]
-     * ====
-     * It is unsafe to assume that an address for which this function returns
-     * false is an externally-owned account (EOA) and not a contract.
-     *
-     * Among others, `isContract` will return false for the following
-     * types of addresses:
-     *
-     *  - an externally-owned account
-     *  - a contract in construction
-     *  - an address where a contract will be created
-     *  - an address where a contract lived, but was destroyed
-     * ====
-     *
-     * [IMPORTANT]
-     * ====
-     * You shouldn't rely on `isContract` to protect against flash loan attacks!
-     *
-     * Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
-     * like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
-     * constructor.
-     * ====
-     */
-    function isContract(address account) internal view returns (bool) {
-        // This method relies on extcodesize/address.code.length, which returns 0
-        // for contracts in construction, since the code is only stored at the end
-        // of the constructor execution.
-
-        return account.code.length > 0;
+    /// @dev Returns number of instantiations by creator.
+    /// @param creator Contract creator.
+    /// @return Returns number of instantiations by creator.
+    function getInstantiationCount(address creator)
+        public
+        constant
+        returns (uint)
+    {
+        return instantiations[creator].length;
     }
 
-    /**
-     * @dev Replacement for Solidity's `transfer`: sends `amount` wei to
-     * `recipient`, forwarding all available gas and reverting on errors.
-     *
-     * https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
-     * of certain opcodes, possibly making contracts go over the 2300 gas limit
-     * imposed by `transfer`, making them unable to receive funds via
-     * `transfer`. {sendValue} removes this limitation.
-     *
-     * https://diligence.consensys.net/posts/2019/09/stop-using-soliditys-transfer-now/[Learn more].
-     *
-     * IMPORTANT: because control is transferred to `recipient`, care must be
-     * taken to not create reentrancy vulnerabilities. Consider using
-     * {ReentrancyGuard} or the
-     * https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
+    /*
+     * Internal functions
      */
-    function sendValue(address payable recipient, uint256 amount) internal {
-        require(address(this).balance >= amount, "Address: insufficient balance");
-
-        (bool success, ) = recipient.call{value: amount}("");
-        require(success, "Address: unable to send value, recipient may have reverted");
-    }
-
-    /**
-     * @dev Performs a Solidity function call using a low level `call`. A
-     * plain `call` is an unsafe replacement for a function call: use this
-     * function instead.
-     *
-     * If `target` reverts with a revert reason, it is bubbled up by this
-     * function (like regular Solidity function calls).
-     *
-     * Returns the raw returned data. To convert to the expected return value,
-     * use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
-     *
-     * Requirements:
-     *
-     * - `target` must be a contract.
-     * - calling `target` with `data` must not revert.
-     *
-     * _Available since v3.1._
-     */
-    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
-        return functionCall(target, data, "Address: low-level call failed");
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
-     * `errorMessage` as a fallback revert reason when `target` reverts.
-     *
-     * _Available since v3.1._
-     */
-    function functionCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        return functionCallWithValue(target, data, 0, errorMessage);
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but also transferring `value` wei to `target`.
-     *
-     * Requirements:
-     *
-     * - the calling contract must have an ETH balance of at least `value`.
-     * - the called Solidity function must be `payable`.
-     *
-     * _Available since v3.1._
-     */
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value
-    ) internal returns (bytes memory) {
-        return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
-     * with `errorMessage` as a fallback revert reason when `target` reverts.
-     *
-     * _Available since v3.1._
-     */
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        require(address(this).balance >= value, "Address: insufficient balance for call");
-        require(isContract(target), "Address: call to non-contract");
-
-        (bool success, bytes memory returndata) = target.call{value: value}(data);
-        return verifyCallResult(success, returndata, errorMessage);
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but performing a static call.
-     *
-     * _Available since v3.3._
-     */
-    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
-        return functionStaticCall(target, data, "Address: low-level static call failed");
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
-     * but performing a static call.
-     *
-     * _Available since v3.3._
-     */
-    function functionStaticCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal view returns (bytes memory) {
-        require(isContract(target), "Address: static call to non-contract");
-
-        (bool success, bytes memory returndata) = target.staticcall(data);
-        return verifyCallResult(success, returndata, errorMessage);
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
-     * but performing a delegate call.
-     *
-     * _Available since v3.4._
-     */
-    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
-        return functionDelegateCall(target, data, "Address: low-level delegate call failed");
-    }
-
-    /**
-     * @dev Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
-     * but performing a delegate call.
-     *
-     * _Available since v3.4._
-     */
-    function functionDelegateCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        require(isContract(target), "Address: delegate call to non-contract");
-
-        (bool success, bytes memory returndata) = target.delegatecall(data);
-        return verifyCallResult(success, returndata, errorMessage);
-    }
-
-    /**
-     * @dev Tool to verifies that a low level call was successful, and revert if it wasn't, either by bubbling the
-     * revert reason using the provided one.
-     *
-     * _Available since v4.3._
-     */
-    function verifyCallResult(
-        bool success,
-        bytes memory returndata,
-        string memory errorMessage
-    ) internal pure returns (bytes memory) {
-        if (success) {
-            return returndata;
-        } else {
-            // Look for revert reason and bubble it up if present
-            if (returndata.length > 0) {
-                // The easiest way to bubble the revert reason is using memory via assembly
-                /// @solidity memory-safe-assembly
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert(errorMessage);
-            }
-        }
+    /// @dev Registers contract in factory registry.
+    /// @param instantiation Address of contract instantiation.
+    function register(address instantiation)
+        internal
+    {
+        isInstantiation[instantiation] = true;
+        instantiations[msg.sender].push(instantiation);
+        ContractInstantiation(msg.sender, instantiation);
     }
 }
 
+// File: contracts/MultiSigWallet.sol
 
-// File @openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol@v4.7.3
-
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.7.0) (token/ERC20/utils/SafeERC20.sol)
-
-pragma solidity ^0.8.0;
+pragma solidity ^0.4.15;
 
 
+/// @title Multisignature wallet - Allows multiple parties to agree on transactions before execution.
+/// @author Stefan George - <stefan.george@consensys.net>
+contract MultiSigWallet {
 
-/**
- * @title SafeERC20
- * @dev Wrappers around ERC20 operations that throw on failure (when the token
- * contract returns false). Tokens that return no value (and instead revert or
- * throw on failure) are also supported, non-reverting calls are assumed to be
- * successful.
- * To use this library you can add a `using SafeERC20 for IERC20;` statement to your contract,
- * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.
- */
-library SafeERC20 {
-    using Address for address;
-
-    function safeTransfer(
-        IERC20 token,
-        address to,
-        uint256 value
-    ) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
-    }
-
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
-    }
-
-    /**
-     * @dev Deprecated. This function has issues similar to the ones found in
-     * {IERC20-approve}, and its usage is discouraged.
-     *
-     * Whenever possible, use {safeIncreaseAllowance} and
-     * {safeDecreaseAllowance} instead.
+    /*
+     *  Events
      */
-    function safeApprove(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        // safeApprove should only be called when setting an initial allowance,
-        // or when resetting it to zero. To increase and decrease it, use
-        // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
-        require(
-            (value == 0) || (token.allowance(address(this), spender) == 0),
-            "SafeERC20: approve from non-zero to non-zero allowance"
-        );
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
-    }
+    event Confirmation(address indexed sender, uint indexed transactionId);
+    event Revocation(address indexed sender, uint indexed transactionId);
+    event Submission(uint indexed transactionId);
+    event Execution(uint indexed transactionId);
+    event ExecutionFailure(uint indexed transactionId);
+    event Deposit(address indexed sender, uint value);
+    event OwnerAddition(address indexed owner);
+    event OwnerRemoval(address indexed owner);
+    event RequirementChange(uint required);
 
-    function safeIncreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        uint256 newAllowance = token.allowance(address(this), spender) + value;
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-    }
-
-    function safeDecreaseAllowance(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        unchecked {
-            uint256 oldAllowance = token.allowance(address(this), spender);
-            require(oldAllowance >= value, "SafeERC20: decreased allowance below zero");
-            uint256 newAllowance = oldAllowance - value;
-            _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
-        }
-    }
-
-    function safePermit(
-        IERC20Permit token,
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) internal {
-        uint256 nonceBefore = token.nonces(owner);
-        token.permit(owner, spender, value, deadline, v, r, s);
-        uint256 nonceAfter = token.nonces(owner);
-        require(nonceAfter == nonceBefore + 1, "SafeERC20: permit did not succeed");
-    }
-
-    /**
-     * @dev Imitates a Solidity high-level call (i.e. a regular function call to a contract), relaxing the requirement
-     * on the return value: the return value is optional (but if data is returned, it must not be false).
-     * @param token The token targeted by the call.
-     * @param data The call data (encoded using abi.encode or one of its variants).
+    /*
+     *  Constants
      */
-    function _callOptionalReturn(IERC20 token, bytes memory data) private {
-        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
-        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
-        // the target address contains contract code and also asserts for success in the low-level call.
+    uint constant public MAX_OWNER_COUNT = 50;
 
-        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
-        if (returndata.length > 0) {
-            // Return data is optional
-            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
-        }
-    }
-}
-
-
-// File @openzeppelin/contracts/utils/Context.sol@v4.7.3
-
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
-
-pragma solidity ^0.8.0;
-
-/**
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they should not be accessed in such a direct
- * manner, since when dealing with meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-abstract contract Context {
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view virtual returns (bytes calldata) {
-        return msg.data;
-    }
-}
-
-
-// File @openzeppelin/contracts/access/Ownable.sol@v4.7.3
-
-// SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.7.0) (access/Ownable.sol)
-
-pragma solidity ^0.8.0;
-
-/**
- * @dev Contract module which provides a basic access control mechanism, where
- * there is an account (an owner) that can be granted exclusive access to
- * specific functions.
- *
- * By default, the owner account will be the one that deploys the contract. This
- * can later be changed with {transferOwnership}.
- *
- * This module is used through inheritance. It will make available the modifier
- * `onlyOwner`, which can be applied to your functions to restrict their use to
- * the owner.
- */
-abstract contract Ownable is Context {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial owner.
+    /*
+     *  Storage
      */
-    constructor() {
-        _transferOwnership(_msgSender());
+    mapping (uint => Transaction) public transactions;
+    mapping (uint => mapping (address => bool)) public confirmations;
+    mapping (address => bool) public isOwner;
+    address[] public owners;
+    uint public required;
+    uint public transactionCount;
+
+    struct Transaction {
+        address destination;
+        uint value;
+        bytes data;
+        bool executed;
     }
 
-    /**
-     * @dev Throws if called by any account other than the owner.
+    /*
+     *  Modifiers
      */
-    modifier onlyOwner() {
-        _checkOwner();
+    modifier onlyWallet() {
+        require(msg.sender == address(this));
         _;
     }
 
-    /**
-     * @dev Returns the address of the current owner.
-     */
-    function owner() public view virtual returns (address) {
-        return _owner;
+    modifier ownerDoesNotExist(address owner) {
+        require(!isOwner[owner]);
+        _;
     }
 
-    /**
-     * @dev Throws if the sender is not the owner.
-     */
-    function _checkOwner() internal view virtual {
-        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+    modifier ownerExists(address owner) {
+        require(isOwner[owner]);
+        _;
     }
 
-    /**
-     * @dev Leaves the contract without owner. It will not be possible to call
-     * `onlyOwner` functions anymore. Can only be called by the current owner.
-     *
-     * NOTE: Renouncing ownership will leave the contract without an owner,
-     * thereby removing any functionality that is only available to the owner.
-     */
-    function renounceOwnership() public virtual onlyOwner {
-        _transferOwnership(address(0));
+    modifier transactionExists(uint transactionId) {
+        require(transactions[transactionId].destination != 0);
+        _;
     }
 
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _transferOwnership(newOwner);
+    modifier confirmed(uint transactionId, address owner) {
+        require(confirmations[transactionId][owner]);
+        _;
     }
 
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
-     */
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = _owner;
-        _owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
-    }
-}
-
-
-// File contracts/treasury-vester/TreasuryVester.sol
-
-// SPDX-License-Identifier: MIT
-// solhint-disable  not-rely-on-time
-pragma solidity ^0.8.0;
-
-
-interface IMiniChefV2 {
-    function fundRewards(uint256 newFunding, uint256 duration) external;
-}
-
-interface IPng is IERC20 {
-    function mint(address dst, uint rawAmount) external;
-}
-
-/**
- * @notice A contract that vests & distributes tokens.
- * It only distributes a single token with a `mint` function.
- */
-contract TreasuryVester is Ownable {
-    using SafeERC20 for IPng;
-
-    struct Recipient{
-        address account;
-        uint allocation;
-        bool isMiniChef;
+    modifier notConfirmed(uint transactionId, address owner) {
+        require(!confirmations[transactionId][owner]);
+        _;
     }
 
-    /// @notice The list of recipients who have an allocation
-    mapping(uint => Recipient) private _recipients;
-
-    /// @notice The multisig who can initialize the vesting
-    address public guardian;
-
-    /// @notice The token to be vested/minted
-    IPng public immutable vestedToken;
-
-    /// @notice Whether the vesting is enabled or not
-    bool public vestingEnabled;
-
-    /// @notice The time stamp of the last vesting
-    uint public lastUpdate;
-
-    /// @notice The number of vestings that took place
-    uint public step;
-
-    /// @notice The total amount of tokens that are being vested
-    uint public immutable startingBalance;
-
-    /// @notice The amount of tokens that was distributed on the last vesting
-    uint private _vestingAmount;
-
-    /// @notice The number of recipients
-    uint private _recipientsLength;
-
-    /// @notice The proportion of tokens that are being distributed this month
-    uint private _vestingPercentage;
-
-    /// @notice The proportion of tokens to be distributed in the first 5 months
-    uint[5] private _initialVestingPercentages = [2500, 1400, 800, 530, 390];
-
-    /// @notice The denominator for both the allocations and the vesting percentages
-    uint private constant DENOMINATOR = 10000;
-
-    /// @notice The minimum duration between two vestings (i.e.: 1 day)
-    uint private constant VESTING_CLIFF = 86400;
-
-    /// @notice The number of steps before decreasing the vesting percentage (i.e.: 1 month)
-    uint private constant STEPS_TO_SLASH = 30;
-
-    /**
-     * @notice Construct a new TreasuryVester contract
-     * @param newVestedToken The token that is being vested & distributed
-     * @param newStartingBalance The total number of tokens to be distributed
-     * @param newRecipients Recipients with an allocation
-     * @param newGuardian An authorized address that can initialize the vesting
-     */
-    constructor(
-        address newVestedToken,
-        uint newStartingBalance,
-        Recipient[] memory newRecipients,
-        address newGuardian
-    ) {
-        require(newStartingBalance > 0, "TreasuryVester::Constructor: invalid starting balance");
-        require(newGuardian != address(0), "TreasuryVester::Constructor: invalid guardian address");
-        require(newVestedToken != address(0), "TreasuryVester::Constructor: invalid token address");
-        guardian = newGuardian;
-        vestedToken = IPng(newVestedToken);
-        startingBalance = newStartingBalance;
-        setRecipients(newRecipients);
+    modifier notExecuted(uint transactionId) {
+        require(!transactions[transactionId].executed);
+        _;
     }
 
-    /**
-     * @notice Interfacing function that displays all recipients
-     * @return The list of current recipients and their allocations
+    modifier notNull(address _address) {
+        require(_address != 0);
+        _;
+    }
+
+    modifier validRequirement(uint ownerCount, uint _required) {
+        require(ownerCount <= MAX_OWNER_COUNT
+            && _required <= ownerCount
+            && _required != 0
+            && ownerCount != 0);
+        _;
+    }
+
+    /// @dev Fallback function allows to deposit ether.
+    function()
+        payable
+    {
+        if (msg.value > 0)
+            Deposit(msg.sender, msg.value);
+    }
+
+    /*
+     * Public functions
      */
-    function getRecipients() external view returns (Recipient[] memory) {
-        require(_recipientsLength != 0, "TreasuryVester::getRecipients: no recipients exist");
-        Recipient[] memory recipients = new Recipient[](_recipientsLength);
-        for (uint i; i < _recipientsLength; ++i) {
-            recipients[i] = _recipients[i];
+    /// @dev Contract constructor sets initial owners and required number of confirmations.
+    /// @param _owners List of initial owners.
+    /// @param _required Number of required confirmations.
+    function MultiSigWallet(address[] _owners, uint _required)
+        public
+        validRequirement(_owners.length, _required)
+    {
+        for (uint i=0; i<_owners.length; i++) {
+            require(!isOwner[_owners[i]] && _owners[i] != 0);
+            isOwner[_owners[i]] = true;
         }
-        return recipients;
+        owners = _owners;
+        required = _required;
     }
 
-    /**
-     * @notice Gets the amount of tokens distributed at each vesting
-     * @dev When externally called, the next distribution amount will be less than the returned amount every 30th step
-     * @return The current amount of tokens distributed at each vesting
-     */
-    function getVestingAmount() public view returns (uint) {
-        return
-            startingBalance *
-                _vestingPercentage /
-                DENOMINATOR /
-                STEPS_TO_SLASH;
+    /// @dev Allows to add a new owner. Transaction has to be sent by wallet.
+    /// @param owner Address of new owner.
+    function addOwner(address owner)
+        public
+        onlyWallet
+        ownerDoesNotExist(owner)
+        notNull(owner)
+        validRequirement(owners.length + 1, required)
+    {
+        isOwner[owner] = true;
+        owners.push(owner);
+        OwnerAddition(owner);
     }
 
-    /**
-     * @notice Distributes the tokens to recipients based on their allocation
-     * @dev If the vesting is enabled, anyone can call this function with 1 day intervals
-     */
-    function distribute() external {
-        require(vestingEnabled, "TreasuryVester::distribute: vesting is not enabled");
-        require(
-            block.timestamp >= lastUpdate + VESTING_CLIFF,
-            "TreasuryVester::distribute: it is too early to distribute"
-        );
-        lastUpdate = block.timestamp;
-
-        // defines a vesting schedule that lasts for 30 months
-        if (step % STEPS_TO_SLASH == 0) {
-            uint slash = step / STEPS_TO_SLASH;
-            if (slash < 5) {
-                _vestingPercentage = _initialVestingPercentages[slash];
-            } else if (slash < 12) {
-                _vestingPercentage -= 20;
-            } else if (slash < 20) {
-                _vestingPercentage -= 15;
-            } else if (slash < 30) {
-                _vestingPercentage -= 10;
-            } else {
-               revert("TreasuryVester::distribute: vesting is over");
+    /// @dev Allows to remove an owner. Transaction has to be sent by wallet.
+    /// @param owner Address of owner.
+    function removeOwner(address owner)
+        public
+        onlyWallet
+        ownerExists(owner)
+    {
+        isOwner[owner] = false;
+        for (uint i=0; i<owners.length - 1; i++)
+            if (owners[i] == owner) {
+                owners[i] = owners[owners.length - 1];
+                break;
             }
-            _vestingAmount = getVestingAmount();
-        }
-        step++;
+        owners.length -= 1;
+        if (required > owners.length)
+            changeRequirement(owners.length);
+        OwnerRemoval(owner);
+    }
 
-        // distributes _vestingAmount of tokens to recipients based on their allocation
-        for (uint i; i < _recipientsLength; ++i) {
-            Recipient memory recipient = _recipients[i];
-            uint amount = recipient.allocation * _vestingAmount / DENOMINATOR;
-            if (!recipient.isMiniChef) {
-                // simply mints or transfer tokens to regular recipients
-                vestedToken.mint(recipient.account, amount);
-            } else {
-                // calls fund rewards of minichef after minting tokens to self
-                vestedToken.mint(address(this), amount);
-                vestedToken.approve(recipient.account, amount);
-                IMiniChefV2(recipient.account).fundRewards(amount, VESTING_CLIFF);
+    /// @dev Allows to replace an owner with a new owner. Transaction has to be sent by wallet.
+    /// @param owner Address of owner to be replaced.
+    /// @param newOwner Address of new owner.
+    function replaceOwner(address owner, address newOwner)
+        public
+        onlyWallet
+        ownerExists(owner)
+        ownerDoesNotExist(newOwner)
+    {
+        for (uint i=0; i<owners.length; i++)
+            if (owners[i] == owner) {
+                owners[i] = newOwner;
+                break;
+            }
+        isOwner[owner] = false;
+        isOwner[newOwner] = true;
+        OwnerRemoval(owner);
+        OwnerAddition(newOwner);
+    }
+
+    /// @dev Allows to change the number of required confirmations. Transaction has to be sent by wallet.
+    /// @param _required Number of required confirmations.
+    function changeRequirement(uint _required)
+        public
+        onlyWallet
+        validRequirement(owners.length, _required)
+    {
+        required = _required;
+        RequirementChange(_required);
+    }
+
+    /// @dev Allows an owner to submit and confirm a transaction.
+    /// @param destination Transaction target address.
+    /// @param value Transaction ether value.
+    /// @param data Transaction data payload.
+    /// @return Returns transaction ID.
+    function submitTransaction(address destination, uint value, bytes data)
+        public
+        returns (uint transactionId)
+    {
+        transactionId = addTransaction(destination, value, data);
+        confirmTransaction(transactionId);
+    }
+
+    /// @dev Allows an owner to confirm a transaction.
+    /// @param transactionId Transaction ID.
+    function confirmTransaction(uint transactionId)
+        public
+        ownerExists(msg.sender)
+        transactionExists(transactionId)
+        notConfirmed(transactionId, msg.sender)
+    {
+        confirmations[transactionId][msg.sender] = true;
+        Confirmation(msg.sender, transactionId);
+        executeTransaction(transactionId);
+    }
+
+    /// @dev Allows an owner to revoke a confirmation for a transaction.
+    /// @param transactionId Transaction ID.
+    function revokeConfirmation(uint transactionId)
+        public
+        ownerExists(msg.sender)
+        confirmed(transactionId, msg.sender)
+        notExecuted(transactionId)
+    {
+        confirmations[transactionId][msg.sender] = false;
+        Revocation(msg.sender, transactionId);
+    }
+
+    /// @dev Allows anyone to execute a confirmed transaction.
+    /// @param transactionId Transaction ID.
+    function executeTransaction(uint transactionId)
+        public
+        ownerExists(msg.sender)
+        confirmed(transactionId, msg.sender)
+        notExecuted(transactionId)
+    {
+        if (isConfirmed(transactionId)) {
+            Transaction storage txn = transactions[transactionId];
+            txn.executed = true;
+            if (external_call(txn.destination, txn.value, txn.data.length, txn.data))
+                Execution(transactionId);
+            else {
+                ExecutionFailure(transactionId);
+                txn.executed = false;
             }
         }
-        emit TokensVested(_vestingAmount);
     }
 
-    /**
-     * @notice Adds new recipients by overriding old recipients
-     * @dev Only callable by the owner (i.e.: governance)
-     * @param newRecipients An array of new recipients with allocation
-     */
-    function setRecipients(Recipient[] memory newRecipients) public onlyOwner {
-        _recipientsLength = newRecipients.length;
-        require(
-            _recipientsLength != 0 && _recipientsLength < 81,
-            "TreasuryVester::setRecipients: invalid recipient number"
-        );
-        uint allocations;
-        for (uint i; i < _recipientsLength; ++i) {
-            Recipient memory recipient = newRecipients[i];
-            require(
-                recipient.account != address(0),
-                "TreasuryVester::setRecipients: invalid recipient address"
-            );
-            require(
-                recipient.allocation != 0,
-                "TreasuryVester::setRecipients: invalid recipient allocation"
-            );
-            _recipients[i] = recipient;
-            allocations += recipient.allocation;
+    // call has been separated into its own function in order to take advantage
+    // of the Solidity's code generator to produce a loop that copies tx.data into memory.
+    function external_call(address destination, uint value, uint dataLength, bytes data) internal returns (bool) {
+        bool result;
+        assembly {
+            let x := mload(0x40)   // "Allocate" memory for output (0x40 is where "free memory" pointer is stored by convention)
+            let d := add(data, 32) // First 32 bytes are the padded length of data, so exclude that
+            result := call(
+                sub(gas, 34710),   // 34710 is the value that solidity is currently emitting
+                                   // It includes callGas (700) + callVeryLow (3, to pay for SUB) + callValueTransferGas (9000) +
+                                   // callNewAccountGas (25000, in case the destination address does not exist and needs creating)
+                destination,
+                value,
+                d,
+                dataLength,        // Size of the input (in bytes) - this is what fixes the padding problem
+                x,
+                0                  // Output is ignored, therefore the output size is zero
+            )
         }
-        require(
-            allocations == DENOMINATOR,
-            "TreasuryVester::setRecipients: invalid total allocation"
-        );
-        emit RecipientsChanged(newRecipients);
+        return result;
     }
 
-    /**
-     * @notice Enables distribution of the tokens
-     * @dev Callable by either the owner (i.e.: governance) or guardian
+    /// @dev Returns the confirmation status of a transaction.
+    /// @param transactionId Transaction ID.
+    /// @return Confirmation status.
+    function isConfirmed(uint transactionId)
+        public
+        constant
+        returns (bool)
+    {
+        uint count = 0;
+        for (uint i=0; i<owners.length; i++) {
+            if (confirmations[transactionId][owners[i]])
+                count += 1;
+            if (count == required)
+                return true;
+        }
+    }
+
+    /*
+     * Internal functions
      */
-    function startVesting() external {
-        require(
-            msg.sender == guardian || msg.sender == owner(),
-            "TreasuryVester::startVesting: unauthorized message sender"
-        );
-        require(
-            !vestingEnabled,
-            "TreasuryVester::startVesting: vesting is already enabled"
-        );
-        _vestingAmount = getVestingAmount();
-        vestingEnabled = true;
-        emit VestingEnabled();
+    /// @dev Adds a new transaction to the transaction mapping, if transaction does not exist yet.
+    /// @param destination Transaction target address.
+    /// @param value Transaction ether value.
+    /// @param data Transaction data payload.
+    /// @return Returns transaction ID.
+    function addTransaction(address destination, uint value, bytes data)
+        internal
+        notNull(destination)
+        returns (uint transactionId)
+    {
+        transactionId = transactionCount;
+        transactions[transactionId] = Transaction({
+            destination: destination,
+            value: value,
+            data: data,
+            executed: false
+        });
+        transactionCount += 1;
+        Submission(transactionId);
     }
 
-    /// @notice An event that is emitted when vesting is enabled
-    event VestingEnabled();
+    /*
+     * Web3 call functions
+     */
+    /// @dev Returns number of confirmations of a transaction.
+    /// @param transactionId Transaction ID.
+    /// @return Number of confirmations.
+    function getConfirmationCount(uint transactionId)
+        public
+        constant
+        returns (uint count)
+    {
+        for (uint i=0; i<owners.length; i++)
+            if (confirmations[transactionId][owners[i]])
+                count += 1;
+    }
 
-    /// @notice An event that is emitted when tokens are distributed
-    event TokensVested(uint amount);
+    /// @dev Returns total number of transactions after filers are applied.
+    /// @param pending Include pending transactions.
+    /// @param executed Include executed transactions.
+    /// @return Total number of transactions after filters are applied.
+    function getTransactionCount(bool pending, bool executed)
+        public
+        constant
+        returns (uint count)
+    {
+        for (uint i=0; i<transactionCount; i++)
+            if (   pending && !transactions[i].executed
+                || executed && transactions[i].executed)
+                count += 1;
+    }
 
-    /// @notice An event that is emitted when recipients are changed
-    event RecipientsChanged(Recipient[] newRecipients);
+    /// @dev Returns list of owners.
+    /// @return List of owner addresses.
+    function getOwners()
+        public
+        constant
+        returns (address[])
+    {
+        return owners;
+    }
+
+    /// @dev Returns array with owner addresses, which confirmed transaction.
+    /// @param transactionId Transaction ID.
+    /// @return Returns array of owner addresses.
+    function getConfirmations(uint transactionId)
+        public
+        constant
+        returns (address[] _confirmations)
+    {
+        address[] memory confirmationsTemp = new address[](owners.length);
+        uint count = 0;
+        uint i;
+        for (i=0; i<owners.length; i++)
+            if (confirmations[transactionId][owners[i]]) {
+                confirmationsTemp[count] = owners[i];
+                count += 1;
+            }
+        _confirmations = new address[](count);
+        for (i=0; i<count; i++)
+            _confirmations[i] = confirmationsTemp[i];
+    }
+
+    /// @dev Returns list of transaction IDs in defined range.
+    /// @param from Index start position of transaction array.
+    /// @param to Index end position of transaction array.
+    /// @param pending Include pending transactions.
+    /// @param executed Include executed transactions.
+    /// @return Returns array of transaction IDs.
+    function getTransactionIds(uint from, uint to, bool pending, bool executed)
+        public
+        constant
+        returns (uint[] _transactionIds)
+    {
+        uint[] memory transactionIdsTemp = new uint[](transactionCount);
+        uint count = 0;
+        uint i;
+        for (i=0; i<transactionCount; i++)
+            if (   pending && !transactions[i].executed
+                || executed && transactions[i].executed)
+            {
+                transactionIdsTemp[count] = i;
+                count += 1;
+            }
+        _transactionIds = new uint[](to - from);
+        for (i=from; i<to; i++)
+            _transactionIds[i - from] = transactionIdsTemp[i];
+    }
+}
+
+// File: contracts/MultiSigWalletWithDailyLimit.sol
+
+pragma solidity ^0.4.15;
+
+
+
+/// @title Multisignature wallet with daily limit - Allows an owner to withdraw a daily limit without multisig.
+/// @author Stefan George - <stefan.george@consensys.net>
+contract MultiSigWalletWithDailyLimit is MultiSigWallet {
+
+    /*
+     *  Events
+     */
+    event DailyLimitChange(uint dailyLimit);
+
+    /*
+     *  Storage
+     */
+    uint public dailyLimit;
+    uint public lastDay;
+    uint public spentToday;
+
+    /*
+     * Public functions
+     */
+    /// @dev Contract constructor sets initial owners, required number of confirmations and daily withdraw limit.
+    /// @param _owners List of initial owners.
+    /// @param _required Number of required confirmations.
+    /// @param _dailyLimit Amount in wei, which can be withdrawn without confirmations on a daily basis.
+    function MultiSigWalletWithDailyLimit(address[] _owners, uint _required, uint _dailyLimit)
+        public
+        MultiSigWallet(_owners, _required)
+    {
+        dailyLimit = _dailyLimit;
+    }
+
+    /// @dev Allows to change the daily limit. Transaction has to be sent by wallet.
+    /// @param _dailyLimit Amount in wei.
+    function changeDailyLimit(uint _dailyLimit)
+        public
+        onlyWallet
+    {
+        dailyLimit = _dailyLimit;
+        DailyLimitChange(_dailyLimit);
+    }
+
+    /// @dev Allows anyone to execute a confirmed transaction or ether withdraws until daily limit is reached.
+    /// @param transactionId Transaction ID.
+    function executeTransaction(uint transactionId)
+        public
+        ownerExists(msg.sender)
+        confirmed(transactionId, msg.sender)
+        notExecuted(transactionId)
+    {
+        Transaction storage txn = transactions[transactionId];
+        bool _confirmed = isConfirmed(transactionId);
+        if (_confirmed || txn.data.length == 0 && isUnderLimit(txn.value)) {
+            txn.executed = true;
+            if (!_confirmed)
+                spentToday += txn.value;
+            if (external_call(txn.destination, txn.value, txn.data.length, txn.data))
+                Execution(transactionId);
+            else {
+                ExecutionFailure(transactionId);
+                txn.executed = false;
+                if (!_confirmed)
+                    spentToday -= txn.value;
+            }
+        }
+    }
+
+    /*
+     * Internal functions
+     */
+    /// @dev Returns if amount is within daily limit and resets spentToday after one day.
+    /// @param amount Amount to withdraw.
+    /// @return Returns if amount is under daily limit.
+    function isUnderLimit(uint amount)
+        internal
+        returns (bool)
+    {
+        if (now > lastDay + 24 hours) {
+            lastDay = now;
+            spentToday = 0;
+        }
+        if (spentToday + amount > dailyLimit || spentToday + amount < spentToday)
+            return false;
+        return true;
+    }
+
+    /*
+     * Web3 call functions
+     */
+    /// @dev Returns maximum withdraw amount.
+    /// @return Returns amount.
+    function calcMaxWithdraw()
+        public
+        constant
+        returns (uint)
+    {
+        if (now > lastDay + 24 hours)
+            return dailyLimit;
+        if (dailyLimit < spentToday)
+            return 0;
+        return dailyLimit - spentToday;
+    }
+}
+
+// File: contracts/MultiSigWalletWithDailyLimitFactory.sol
+
+pragma solidity ^0.4.15;
+
+
+
+
+/// @title Multisignature wallet factory for daily limit version - Allows creation of multisig wallet.
+/// @author Stefan George - <stefan.george@consensys.net>
+contract MultiSigWalletWithDailyLimitFactory is Factory {
+
+    /*
+     * Public functions
+     */
+    /// @dev Allows verified creation of multisignature wallet.
+    /// @param _owners List of initial owners.
+    /// @param _required Number of required confirmations.
+    /// @param _dailyLimit Amount in wei, which can be withdrawn without confirmations on a daily basis.
+    /// @return Returns wallet address.
+    function create(address[] _owners, uint _required, uint _dailyLimit)
+        public
+        returns (address wallet)
+    {
+        wallet = new MultiSigWalletWithDailyLimit(_owners, _required, _dailyLimit);
+        register(wallet);
+    }
 }

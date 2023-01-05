@@ -2,7 +2,10 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 const { CHAINS } = require("@pangolindex/sdk");
+const { task } = require("hardhat/config");
 require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
 
 // Create hardhat networks from @pangolindex/sdk
 let networksFromSdk = {};
@@ -26,6 +29,12 @@ networksFromSdk["localhost"] = {
   },
 };
 
+networksFromSdk["flare_mainnet"] = {
+  url: "https://flare-api.flare.network/ext/C/rpc",
+  chainId: 14,
+  accounts: [process.env.PRIVATE_KEY],
+};
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async () => {
@@ -35,6 +44,24 @@ task("accounts", "Prints the list of accounts", async () => {
     console.log(account.address);
   }
 });
+
+task(
+  "listNetworks",
+  "Lists all networks defined in the hardhat.config.js file",
+  async () => {
+    // Load the hardhat.config.js file
+    const configFilePath = path.resolve(__dirname, "hardhat.config.js");
+    const config = require(configFilePath);
+
+    // Get the networks defined in the config file
+    const networks = config.networks;
+
+    // Print the name of each network
+    for (const networkName in networks) {
+      console.log(networkName);
+    }
+  }
+);
 
 /**
  * @type import('hardhat/config').HardhatUserConfig
