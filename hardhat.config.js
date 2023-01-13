@@ -2,7 +2,6 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-etherscan");
 const { CHAINS } = require("@pangolindex/sdk");
-const { task } = require("hardhat/config");
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
@@ -51,8 +50,9 @@ task("accounts", "Prints the list of accounts", async () => {
   }
 });
 
+// To learn which networks are defined
 task(
-  "listNetworks",
+  "networks",
   "Lists all networks defined in the hardhat.config.js file",
   async () => {
     // Load the hardhat.config.js file
@@ -172,7 +172,7 @@ module.exports = {
       ftmTestnet: process.env.FTMSCAN_API_KEY,
       // optimism
       optimisticEthereum: process.env.OPTIMISTIC_ETHERSCAN_API_KEY,
-      optimisticKovan: process.env.OPTIMISTIC_ETHERSCAN_API_KEY,
+      // optimisticKovan: process.env.OPTIMISTIC_ETHERSCAN_API_KEY, // to avoid the error
       // polygon
       polygon: process.env.POLYGONSCAN_API_KEY,
       polygonMumbai: process.env.POLYGONSCAN_API_KEY,
@@ -189,6 +189,29 @@ module.exports = {
       // to specify one; any string placeholder will work
       xdai: "api-key",
       sokol: "api-key",
+      flare: "api-key",
+      coston2: "api-key",
     },
+    // adding support for non-supported explorers
+    // see Hardhat Docs for additional information
+    // https://hardhat.org/hardhat-runner/plugins/nomiclabs-hardhat-etherscan#adding-support-for-other-networks
+    customChains: [
+      {
+        network: "flare",
+        chainId: 14,
+        urls: {
+          apiURL: "https://flare-explorer.flare.network/api",
+          browserURL: "https://flare-explorer.flare.network/",
+        },
+      },
+      {
+        network: "coston2",
+        chainId: 114,
+        urls: {
+          apiURL: "https://coston2-explorer.flare.network/api",
+          browserURL: "https://coston2-explorer.flare.network/",
+        },
+      },
+    ],
   },
 };
