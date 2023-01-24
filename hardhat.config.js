@@ -23,21 +23,9 @@ networksFromSdk["localhost"] = {
   accounts: [process.env.PRIVATE_KEY],
   forking: {
     enabled: true,
-    url: "https://api.avax-test.network/ext/bc/C/rpc",
+    url: "https://coston2-api.flare.network/ext/C/rpc",
     accounts: [process.env.PRIVATE_KEY],
   },
-};
-
-networksFromSdk["flare_mainnet"] = {
-  url: "https://flare-api.flare.network/ext/C/rpc",
-  chainId: 14,
-  accounts: [process.env.PRIVATE_KEY],
-};
-
-networksFromSdk["evmos_testnet"] = {
-  url: "https://eth.bd.evmos.dev:8545",
-  chainId: 9000,
-  accounts: [process.env.PRIVATE_KEY],
 };
 
 // This is a sample Hardhat task. To learn how to create your own go to
