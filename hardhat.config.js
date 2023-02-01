@@ -23,9 +23,14 @@ networksFromSdk["localhost"] = {
   accounts: [process.env.PRIVATE_KEY],
   forking: {
     enabled: true,
-    url: "https://coston2-api.flare.network/ext/C/rpc",
+    url: "https://eth.bd.evmos.org:8545",
     accounts: [process.env.PRIVATE_KEY],
   },
+};
+networksFromSdk["evmos_mainnet"] = {
+  url: "https://eth.bd.evmos.org:8545",
+  chainId: 9001,
+  accounts: [process.env.PRIVATE_KEY],
 };
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -179,6 +184,7 @@ module.exports = {
       sokol: "api-key",
       flare: "api-key",
       coston2: "api-key",
+      evmos_mainnet: "api-key",
     },
     // adding support for non-supported explorers
     // see Hardhat Docs for additional information
@@ -198,6 +204,14 @@ module.exports = {
         urls: {
           apiURL: "https://coston2-explorer.flare.network/api",
           browserURL: "https://coston2-explorer.flare.network/",
+        },
+      },
+      {
+        network: "evmos_mainnet",
+        chainId: 9001,
+        urls: {
+          apiURL: "https://blockscout.evmos.org/api",
+          browserURL: "https://blockscout.evmos.org/",
         },
       },
     ],

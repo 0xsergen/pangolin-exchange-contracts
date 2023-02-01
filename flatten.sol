@@ -1,579 +1,556 @@
 // Sources flattened with hardhat v2.9.3 https://hardhat.org
 
-// File contracts/multisig/MultiSigWalletWithDailyLimitFactory.sol
+// File contracts/pangolin-core/interfaces/IPangolinFactory.sol
 
-// File: contracts/Factory.sol
+pragma solidity >=0.5.0;
 
-pragma solidity ^0.4.15;
+interface IPangolinFactory {
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
-contract Factory {
+    function feeTo() external view returns (address);
+    function feeToSetter() external view returns (address);
 
-    /*
-     *  Events
-     */
-    event ContractInstantiation(address sender, address instantiation);
+    function getPair(address tokenA, address tokenB) external view returns (address pair);
+    function allPairs(uint) external view returns (address pair);
+    function allPairsLength() external view returns (uint);
 
-    /*
-     *  Storage
-     */
-    mapping(address => bool) public isInstantiation;
-    mapping(address => address[]) public instantiations;
+    function createPair(address tokenA, address tokenB) external returns (address pair);
 
-    /*
-     * Public functions
-     */
-    /// @dev Returns number of instantiations by creator.
-    /// @param creator Contract creator.
-    /// @return Returns number of instantiations by creator.
-    function getInstantiationCount(address creator)
-        public
-        constant
-        returns (uint)
-    {
-        return instantiations[creator].length;
+    function setFeeTo(address) external;
+    function setFeeToSetter(address) external;
+}
+
+
+// File contracts/pangolin-core/interfaces/IPangolinPair.sol
+
+pragma solidity >=0.5.0;
+
+interface IPangolinPair {
+    event Approval(address indexed owner, address indexed spender, uint value);
+    event Transfer(address indexed from, address indexed to, uint value);
+
+    function name() external pure returns (string memory);
+    function symbol() external pure returns (string memory);
+    function decimals() external pure returns (uint8);
+    function totalSupply() external view returns (uint);
+    function balanceOf(address owner) external view returns (uint);
+    function allowance(address owner, address spender) external view returns (uint);
+
+    function approve(address spender, uint value) external returns (bool);
+    function transfer(address to, uint value) external returns (bool);
+    function transferFrom(address from, address to, uint value) external returns (bool);
+
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+    function PERMIT_TYPEHASH() external pure returns (bytes32);
+    function nonces(address owner) external view returns (uint);
+
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
+
+    event Mint(address indexed sender, uint amount0, uint amount1);
+    event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
+    event Swap(
+        address indexed sender,
+        uint amount0In,
+        uint amount1In,
+        uint amount0Out,
+        uint amount1Out,
+        address indexed to
+    );
+    event Sync(uint112 reserve0, uint112 reserve1);
+
+    function MINIMUM_LIQUIDITY() external pure returns (uint);
+    function factory() external view returns (address);
+    function token0() external view returns (address);
+    function token1() external view returns (address);
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    function price0CumulativeLast() external view returns (uint);
+    function price1CumulativeLast() external view returns (uint);
+    function kLast() external view returns (uint);
+
+    function mint(address to) external returns (uint liquidity);
+    function burn(address to) external returns (uint amount0, uint amount1);
+    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external;
+    function skim(address to) external;
+    function sync() external;
+
+    function initialize(address, address) external;
+}
+
+
+// File contracts/pangolin-core/interfaces/IPangolinERC20.sol
+
+pragma solidity >=0.5.0;
+
+interface IPangolinERC20 {
+    event Approval(address indexed owner, address indexed spender, uint value);
+    event Transfer(address indexed from, address indexed to, uint value);
+
+    function name() external pure returns (string memory);
+    function symbol() external pure returns (string memory);
+    function decimals() external pure returns (uint8);
+    function totalSupply() external view returns (uint);
+    function balanceOf(address owner) external view returns (uint);
+    function allowance(address owner, address spender) external view returns (uint);
+
+    function approve(address spender, uint value) external returns (bool);
+    function transfer(address to, uint value) external returns (bool);
+    function transferFrom(address from, address to, uint value) external returns (bool);
+
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+    function PERMIT_TYPEHASH() external pure returns (bytes32);
+    function nonces(address owner) external view returns (uint);
+
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
+}
+
+
+// File contracts/pangolin-core/libraries/SafeMath.sol
+
+pragma solidity =0.5.16;
+
+// a library for performing overflow-safe math, courtesy of DappHub (https://github.com/dapphub/ds-math)
+
+library SafeMath {
+    function add(uint x, uint y) internal pure returns (uint z) {
+        require((z = x + y) >= x, 'ds-math-add-overflow');
     }
 
-    /*
-     * Internal functions
-     */
-    /// @dev Registers contract in factory registry.
-    /// @param instantiation Address of contract instantiation.
-    function register(address instantiation)
-        internal
-    {
-        isInstantiation[instantiation] = true;
-        instantiations[msg.sender].push(instantiation);
-        ContractInstantiation(msg.sender, instantiation);
+    function sub(uint x, uint y) internal pure returns (uint z) {
+        require((z = x - y) <= x, 'ds-math-sub-underflow');
+    }
+
+    function mul(uint x, uint y) internal pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x, 'ds-math-mul-overflow');
     }
 }
 
-// File: contracts/MultiSigWallet.sol
 
-pragma solidity ^0.4.15;
+// File contracts/pangolin-core/PangolinERC20.sol
+
+pragma solidity =0.5.16;
 
 
-/// @title Multisignature wallet - Allows multiple parties to agree on transactions before execution.
-/// @author Stefan George - <stefan.george@consensys.net>
-contract MultiSigWallet {
+contract PangolinERC20 is IPangolinERC20 {
+    using SafeMath for uint;
 
-    /*
-     *  Events
-     */
-    event Confirmation(address indexed sender, uint indexed transactionId);
-    event Revocation(address indexed sender, uint indexed transactionId);
-    event Submission(uint indexed transactionId);
-    event Execution(uint indexed transactionId);
-    event ExecutionFailure(uint indexed transactionId);
-    event Deposit(address indexed sender, uint value);
-    event OwnerAddition(address indexed owner);
-    event OwnerRemoval(address indexed owner);
-    event RequirementChange(uint required);
+    string public constant name = 'Pangolin Liquidity';
+    string public constant symbol = 'PGL';
+    uint8 public constant decimals = 18;
+    uint  public totalSupply;
+    mapping(address => uint) public balanceOf;
+    mapping(address => mapping(address => uint)) public allowance;
 
-    /*
-     *  Constants
-     */
-    uint constant public MAX_OWNER_COUNT = 50;
+    bytes32 public DOMAIN_SEPARATOR;
+    // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
+    mapping(address => uint) public nonces;
 
-    /*
-     *  Storage
-     */
-    mapping (uint => Transaction) public transactions;
-    mapping (uint => mapping (address => bool)) public confirmations;
-    mapping (address => bool) public isOwner;
-    address[] public owners;
-    uint public required;
-    uint public transactionCount;
+    event Approval(address indexed owner, address indexed spender, uint value);
+    event Transfer(address indexed from, address indexed to, uint value);
 
-    struct Transaction {
-        address destination;
-        uint value;
-        bytes data;
-        bool executed;
-    }
-
-    /*
-     *  Modifiers
-     */
-    modifier onlyWallet() {
-        require(msg.sender == address(this));
-        _;
-    }
-
-    modifier ownerDoesNotExist(address owner) {
-        require(!isOwner[owner]);
-        _;
-    }
-
-    modifier ownerExists(address owner) {
-        require(isOwner[owner]);
-        _;
-    }
-
-    modifier transactionExists(uint transactionId) {
-        require(transactions[transactionId].destination != 0);
-        _;
-    }
-
-    modifier confirmed(uint transactionId, address owner) {
-        require(confirmations[transactionId][owner]);
-        _;
-    }
-
-    modifier notConfirmed(uint transactionId, address owner) {
-        require(!confirmations[transactionId][owner]);
-        _;
-    }
-
-    modifier notExecuted(uint transactionId) {
-        require(!transactions[transactionId].executed);
-        _;
-    }
-
-    modifier notNull(address _address) {
-        require(_address != 0);
-        _;
-    }
-
-    modifier validRequirement(uint ownerCount, uint _required) {
-        require(ownerCount <= MAX_OWNER_COUNT
-            && _required <= ownerCount
-            && _required != 0
-            && ownerCount != 0);
-        _;
-    }
-
-    /// @dev Fallback function allows to deposit ether.
-    function()
-        payable
-    {
-        if (msg.value > 0)
-            Deposit(msg.sender, msg.value);
-    }
-
-    /*
-     * Public functions
-     */
-    /// @dev Contract constructor sets initial owners and required number of confirmations.
-    /// @param _owners List of initial owners.
-    /// @param _required Number of required confirmations.
-    function MultiSigWallet(address[] _owners, uint _required)
-        public
-        validRequirement(_owners.length, _required)
-    {
-        for (uint i=0; i<_owners.length; i++) {
-            require(!isOwner[_owners[i]] && _owners[i] != 0);
-            isOwner[_owners[i]] = true;
-        }
-        owners = _owners;
-        required = _required;
-    }
-
-    /// @dev Allows to add a new owner. Transaction has to be sent by wallet.
-    /// @param owner Address of new owner.
-    function addOwner(address owner)
-        public
-        onlyWallet
-        ownerDoesNotExist(owner)
-        notNull(owner)
-        validRequirement(owners.length + 1, required)
-    {
-        isOwner[owner] = true;
-        owners.push(owner);
-        OwnerAddition(owner);
-    }
-
-    /// @dev Allows to remove an owner. Transaction has to be sent by wallet.
-    /// @param owner Address of owner.
-    function removeOwner(address owner)
-        public
-        onlyWallet
-        ownerExists(owner)
-    {
-        isOwner[owner] = false;
-        for (uint i=0; i<owners.length - 1; i++)
-            if (owners[i] == owner) {
-                owners[i] = owners[owners.length - 1];
-                break;
-            }
-        owners.length -= 1;
-        if (required > owners.length)
-            changeRequirement(owners.length);
-        OwnerRemoval(owner);
-    }
-
-    /// @dev Allows to replace an owner with a new owner. Transaction has to be sent by wallet.
-    /// @param owner Address of owner to be replaced.
-    /// @param newOwner Address of new owner.
-    function replaceOwner(address owner, address newOwner)
-        public
-        onlyWallet
-        ownerExists(owner)
-        ownerDoesNotExist(newOwner)
-    {
-        for (uint i=0; i<owners.length; i++)
-            if (owners[i] == owner) {
-                owners[i] = newOwner;
-                break;
-            }
-        isOwner[owner] = false;
-        isOwner[newOwner] = true;
-        OwnerRemoval(owner);
-        OwnerAddition(newOwner);
-    }
-
-    /// @dev Allows to change the number of required confirmations. Transaction has to be sent by wallet.
-    /// @param _required Number of required confirmations.
-    function changeRequirement(uint _required)
-        public
-        onlyWallet
-        validRequirement(owners.length, _required)
-    {
-        required = _required;
-        RequirementChange(_required);
-    }
-
-    /// @dev Allows an owner to submit and confirm a transaction.
-    /// @param destination Transaction target address.
-    /// @param value Transaction ether value.
-    /// @param data Transaction data payload.
-    /// @return Returns transaction ID.
-    function submitTransaction(address destination, uint value, bytes data)
-        public
-        returns (uint transactionId)
-    {
-        transactionId = addTransaction(destination, value, data);
-        confirmTransaction(transactionId);
-    }
-
-    /// @dev Allows an owner to confirm a transaction.
-    /// @param transactionId Transaction ID.
-    function confirmTransaction(uint transactionId)
-        public
-        ownerExists(msg.sender)
-        transactionExists(transactionId)
-        notConfirmed(transactionId, msg.sender)
-    {
-        confirmations[transactionId][msg.sender] = true;
-        Confirmation(msg.sender, transactionId);
-        executeTransaction(transactionId);
-    }
-
-    /// @dev Allows an owner to revoke a confirmation for a transaction.
-    /// @param transactionId Transaction ID.
-    function revokeConfirmation(uint transactionId)
-        public
-        ownerExists(msg.sender)
-        confirmed(transactionId, msg.sender)
-        notExecuted(transactionId)
-    {
-        confirmations[transactionId][msg.sender] = false;
-        Revocation(msg.sender, transactionId);
-    }
-
-    /// @dev Allows anyone to execute a confirmed transaction.
-    /// @param transactionId Transaction ID.
-    function executeTransaction(uint transactionId)
-        public
-        ownerExists(msg.sender)
-        confirmed(transactionId, msg.sender)
-        notExecuted(transactionId)
-    {
-        if (isConfirmed(transactionId)) {
-            Transaction storage txn = transactions[transactionId];
-            txn.executed = true;
-            if (external_call(txn.destination, txn.value, txn.data.length, txn.data))
-                Execution(transactionId);
-            else {
-                ExecutionFailure(transactionId);
-                txn.executed = false;
-            }
-        }
-    }
-
-    // call has been separated into its own function in order to take advantage
-    // of the Solidity's code generator to produce a loop that copies tx.data into memory.
-    function external_call(address destination, uint value, uint dataLength, bytes data) internal returns (bool) {
-        bool result;
+    constructor() public {
+        uint chainId;
         assembly {
-            let x := mload(0x40)   // "Allocate" memory for output (0x40 is where "free memory" pointer is stored by convention)
-            let d := add(data, 32) // First 32 bytes are the padded length of data, so exclude that
-            result := call(
-                sub(gas, 34710),   // 34710 is the value that solidity is currently emitting
-                                   // It includes callGas (700) + callVeryLow (3, to pay for SUB) + callValueTransferGas (9000) +
-                                   // callNewAccountGas (25000, in case the destination address does not exist and needs creating)
-                destination,
-                value,
-                d,
-                dataLength,        // Size of the input (in bytes) - this is what fixes the padding problem
-                x,
-                0                  // Output is ignored, therefore the output size is zero
+            chainId := chainid
+        }
+        DOMAIN_SEPARATOR = keccak256(
+            abi.encode(
+                keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
+                keccak256(bytes(name)),
+                keccak256(bytes('1')),
+                chainId,
+                address(this)
             )
-        }
-        return result;
+        );
     }
 
-    /// @dev Returns the confirmation status of a transaction.
-    /// @param transactionId Transaction ID.
-    /// @return Confirmation status.
-    function isConfirmed(uint transactionId)
-        public
-        constant
-        returns (bool)
-    {
-        uint count = 0;
-        for (uint i=0; i<owners.length; i++) {
-            if (confirmations[transactionId][owners[i]])
-                count += 1;
-            if (count == required)
-                return true;
-        }
+    function _mint(address to, uint value) internal {
+        totalSupply = totalSupply.add(value);
+        balanceOf[to] = balanceOf[to].add(value);
+        emit Transfer(address(0), to, value);
     }
 
-    /*
-     * Internal functions
-     */
-    /// @dev Adds a new transaction to the transaction mapping, if transaction does not exist yet.
-    /// @param destination Transaction target address.
-    /// @param value Transaction ether value.
-    /// @param data Transaction data payload.
-    /// @return Returns transaction ID.
-    function addTransaction(address destination, uint value, bytes data)
-        internal
-        notNull(destination)
-        returns (uint transactionId)
-    {
-        transactionId = transactionCount;
-        transactions[transactionId] = Transaction({
-            destination: destination,
-            value: value,
-            data: data,
-            executed: false
-        });
-        transactionCount += 1;
-        Submission(transactionId);
+    function _burn(address from, uint value) internal {
+        balanceOf[from] = balanceOf[from].sub(value);
+        totalSupply = totalSupply.sub(value);
+        emit Transfer(from, address(0), value);
     }
 
-    /*
-     * Web3 call functions
-     */
-    /// @dev Returns number of confirmations of a transaction.
-    /// @param transactionId Transaction ID.
-    /// @return Number of confirmations.
-    function getConfirmationCount(uint transactionId)
-        public
-        constant
-        returns (uint count)
-    {
-        for (uint i=0; i<owners.length; i++)
-            if (confirmations[transactionId][owners[i]])
-                count += 1;
+    function _approve(address owner, address spender, uint value) private {
+        allowance[owner][spender] = value;
+        emit Approval(owner, spender, value);
     }
 
-    /// @dev Returns total number of transactions after filers are applied.
-    /// @param pending Include pending transactions.
-    /// @param executed Include executed transactions.
-    /// @return Total number of transactions after filters are applied.
-    function getTransactionCount(bool pending, bool executed)
-        public
-        constant
-        returns (uint count)
-    {
-        for (uint i=0; i<transactionCount; i++)
-            if (   pending && !transactions[i].executed
-                || executed && transactions[i].executed)
-                count += 1;
+    function _transfer(address from, address to, uint value) private {
+        balanceOf[from] = balanceOf[from].sub(value);
+        balanceOf[to] = balanceOf[to].add(value);
+        emit Transfer(from, to, value);
     }
 
-    /// @dev Returns list of owners.
-    /// @return List of owner addresses.
-    function getOwners()
-        public
-        constant
-        returns (address[])
-    {
-        return owners;
-    }
-
-    /// @dev Returns array with owner addresses, which confirmed transaction.
-    /// @param transactionId Transaction ID.
-    /// @return Returns array of owner addresses.
-    function getConfirmations(uint transactionId)
-        public
-        constant
-        returns (address[] _confirmations)
-    {
-        address[] memory confirmationsTemp = new address[](owners.length);
-        uint count = 0;
-        uint i;
-        for (i=0; i<owners.length; i++)
-            if (confirmations[transactionId][owners[i]]) {
-                confirmationsTemp[count] = owners[i];
-                count += 1;
-            }
-        _confirmations = new address[](count);
-        for (i=0; i<count; i++)
-            _confirmations[i] = confirmationsTemp[i];
-    }
-
-    /// @dev Returns list of transaction IDs in defined range.
-    /// @param from Index start position of transaction array.
-    /// @param to Index end position of transaction array.
-    /// @param pending Include pending transactions.
-    /// @param executed Include executed transactions.
-    /// @return Returns array of transaction IDs.
-    function getTransactionIds(uint from, uint to, bool pending, bool executed)
-        public
-        constant
-        returns (uint[] _transactionIds)
-    {
-        uint[] memory transactionIdsTemp = new uint[](transactionCount);
-        uint count = 0;
-        uint i;
-        for (i=0; i<transactionCount; i++)
-            if (   pending && !transactions[i].executed
-                || executed && transactions[i].executed)
-            {
-                transactionIdsTemp[count] = i;
-                count += 1;
-            }
-        _transactionIds = new uint[](to - from);
-        for (i=from; i<to; i++)
-            _transactionIds[i - from] = transactionIdsTemp[i];
-    }
-}
-
-// File: contracts/MultiSigWalletWithDailyLimit.sol
-
-pragma solidity ^0.4.15;
-
-
-
-/// @title Multisignature wallet with daily limit - Allows an owner to withdraw a daily limit without multisig.
-/// @author Stefan George - <stefan.george@consensys.net>
-contract MultiSigWalletWithDailyLimit is MultiSigWallet {
-
-    /*
-     *  Events
-     */
-    event DailyLimitChange(uint dailyLimit);
-
-    /*
-     *  Storage
-     */
-    uint public dailyLimit;
-    uint public lastDay;
-    uint public spentToday;
-
-    /*
-     * Public functions
-     */
-    /// @dev Contract constructor sets initial owners, required number of confirmations and daily withdraw limit.
-    /// @param _owners List of initial owners.
-    /// @param _required Number of required confirmations.
-    /// @param _dailyLimit Amount in wei, which can be withdrawn without confirmations on a daily basis.
-    function MultiSigWalletWithDailyLimit(address[] _owners, uint _required, uint _dailyLimit)
-        public
-        MultiSigWallet(_owners, _required)
-    {
-        dailyLimit = _dailyLimit;
-    }
-
-    /// @dev Allows to change the daily limit. Transaction has to be sent by wallet.
-    /// @param _dailyLimit Amount in wei.
-    function changeDailyLimit(uint _dailyLimit)
-        public
-        onlyWallet
-    {
-        dailyLimit = _dailyLimit;
-        DailyLimitChange(_dailyLimit);
-    }
-
-    /// @dev Allows anyone to execute a confirmed transaction or ether withdraws until daily limit is reached.
-    /// @param transactionId Transaction ID.
-    function executeTransaction(uint transactionId)
-        public
-        ownerExists(msg.sender)
-        confirmed(transactionId, msg.sender)
-        notExecuted(transactionId)
-    {
-        Transaction storage txn = transactions[transactionId];
-        bool _confirmed = isConfirmed(transactionId);
-        if (_confirmed || txn.data.length == 0 && isUnderLimit(txn.value)) {
-            txn.executed = true;
-            if (!_confirmed)
-                spentToday += txn.value;
-            if (external_call(txn.destination, txn.value, txn.data.length, txn.data))
-                Execution(transactionId);
-            else {
-                ExecutionFailure(transactionId);
-                txn.executed = false;
-                if (!_confirmed)
-                    spentToday -= txn.value;
-            }
-        }
-    }
-
-    /*
-     * Internal functions
-     */
-    /// @dev Returns if amount is within daily limit and resets spentToday after one day.
-    /// @param amount Amount to withdraw.
-    /// @return Returns if amount is under daily limit.
-    function isUnderLimit(uint amount)
-        internal
-        returns (bool)
-    {
-        if (now > lastDay + 24 hours) {
-            lastDay = now;
-            spentToday = 0;
-        }
-        if (spentToday + amount > dailyLimit || spentToday + amount < spentToday)
-            return false;
+    function approve(address spender, uint value) external returns (bool) {
+        _approve(msg.sender, spender, value);
         return true;
     }
 
-    /*
-     * Web3 call functions
-     */
-    /// @dev Returns maximum withdraw amount.
-    /// @return Returns amount.
-    function calcMaxWithdraw()
-        public
-        constant
-        returns (uint)
-    {
-        if (now > lastDay + 24 hours)
-            return dailyLimit;
-        if (dailyLimit < spentToday)
-            return 0;
-        return dailyLimit - spentToday;
+    function transfer(address to, uint value) external returns (bool) {
+        _transfer(msg.sender, to, value);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint value) external returns (bool) {
+        if (allowance[from][msg.sender] != uint(-1)) {
+            allowance[from][msg.sender] = allowance[from][msg.sender].sub(value);
+        }
+        _transfer(from, to, value);
+        return true;
+    }
+
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+        require(deadline >= block.timestamp, 'Pangolin: EXPIRED');
+        bytes32 digest = keccak256(
+            abi.encodePacked(
+                '\x19\x01',
+                DOMAIN_SEPARATOR,
+                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
+            )
+        );
+        address recoveredAddress = ecrecover(digest, v, r, s);
+        require(recoveredAddress != address(0) && recoveredAddress == owner, 'Pangolin: INVALID_SIGNATURE');
+        _approve(owner, spender, value);
     }
 }
 
-// File: contracts/MultiSigWalletWithDailyLimitFactory.sol
 
-pragma solidity ^0.4.15;
+// File contracts/pangolin-core/libraries/Math.sol
+
+pragma solidity =0.5.16;
+
+// a library for performing various math operations
+
+library Math {
+    function min(uint x, uint y) internal pure returns (uint z) {
+        z = x < y ? x : y;
+    }
+
+    // babylonian method (https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Babylonian_method)
+    function sqrt(uint y) internal pure returns (uint z) {
+        if (y > 3) {
+            z = y;
+            uint x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
+    }
+}
+
+
+// File contracts/pangolin-core/libraries/UQ112x112.sol
+
+pragma solidity =0.5.16;
+
+// a library for handling binary fixed point numbers (https://en.wikipedia.org/wiki/Q_(number_format))
+
+// range: [0, 2**112 - 1]
+// resolution: 1 / 2**112
+
+library UQ112x112 {
+    uint224 constant Q112 = 2**112;
+
+    // encode a uint112 as a UQ112x112
+    function encode(uint112 y) internal pure returns (uint224 z) {
+        z = uint224(y) * Q112; // never overflows
+    }
+
+    // divide a UQ112x112 by a uint112, returning a UQ112x112
+    function uqdiv(uint224 x, uint112 y) internal pure returns (uint224 z) {
+        z = x / uint224(y);
+    }
+}
+
+
+// File contracts/pangolin-core/interfaces/IERC20.sol
+
+pragma solidity >=0.5.0;
+
+interface IERC20 {
+    event Approval(address indexed owner, address indexed spender, uint value);
+    event Transfer(address indexed from, address indexed to, uint value);
+
+    function name() external view returns (string memory);
+    function symbol() external view returns (string memory);
+    function decimals() external view returns (uint8);
+    function totalSupply() external view returns (uint);
+    function balanceOf(address owner) external view returns (uint);
+    function allowance(address owner, address spender) external view returns (uint);
+
+    function approve(address spender, uint value) external returns (bool);
+    function transfer(address to, uint value) external returns (bool);
+    function transferFrom(address from, address to, uint value) external returns (bool);
+}
+
+
+// File contracts/pangolin-core/interfaces/IPangolinCallee.sol
+
+pragma solidity >=0.5.0;
+
+interface IPangolinCallee {
+    function pangolinCall(address sender, uint amount0, uint amount1, bytes calldata data) external;
+}
+
+
+// File contracts/pangolin-core/PangolinPair.sol
+
+pragma solidity =0.5.16;
 
 
 
 
-/// @title Multisignature wallet factory for daily limit version - Allows creation of multisig wallet.
-/// @author Stefan George - <stefan.george@consensys.net>
-contract MultiSigWalletWithDailyLimitFactory is Factory {
 
-    /*
-     * Public functions
-     */
-    /// @dev Allows verified creation of multisignature wallet.
-    /// @param _owners List of initial owners.
-    /// @param _required Number of required confirmations.
-    /// @param _dailyLimit Amount in wei, which can be withdrawn without confirmations on a daily basis.
-    /// @return Returns wallet address.
-    function create(address[] _owners, uint _required, uint _dailyLimit)
-        public
-        returns (address wallet)
-    {
-        wallet = new MultiSigWalletWithDailyLimit(_owners, _required, _dailyLimit);
-        register(wallet);
+
+
+contract PangolinPair is IPangolinPair, PangolinERC20 {
+    using SafeMath  for uint;
+    using UQ112x112 for uint224;
+
+    uint public constant MINIMUM_LIQUIDITY = 10**3;
+    bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
+
+    address public factory;
+    address public token0;
+    address public token1;
+
+    uint112 private reserve0;           // uses single storage slot, accessible via getReserves
+    uint112 private reserve1;           // uses single storage slot, accessible via getReserves
+    uint32  private blockTimestampLast; // uses single storage slot, accessible via getReserves
+
+    uint public price0CumulativeLast;
+    uint public price1CumulativeLast;
+    uint public kLast; // reserve0 * reserve1, as of immediately after the most recent liquidity event
+
+    uint private unlocked = 1;
+    modifier lock() {
+        require(unlocked == 1, 'Pangolin: LOCKED');
+        unlocked = 0;
+        _;
+        unlocked = 1;
+    }
+
+    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
+        _reserve0 = reserve0;
+        _reserve1 = reserve1;
+        _blockTimestampLast = blockTimestampLast;
+    }
+
+    function _safeTransfer(address token, address to, uint value) private {
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'Pangolin: TRANSFER_FAILED');
+    }
+
+    event Mint(address indexed sender, uint amount0, uint amount1);
+    event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
+    event Swap(
+        address indexed sender,
+        uint amount0In,
+        uint amount1In,
+        uint amount0Out,
+        uint amount1Out,
+        address indexed to
+    );
+    event Sync(uint112 reserve0, uint112 reserve1);
+
+    constructor() public {
+        factory = msg.sender;
+    }
+
+    // called once by the factory at time of deployment
+    function initialize(address _token0, address _token1) external {
+        require(msg.sender == factory, 'Pangolin: FORBIDDEN'); // sufficient check
+        token0 = _token0;
+        token1 = _token1;
+    }
+
+    // update reserves and, on the first call per block, price accumulators
+    function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
+        require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'Pangolin: OVERFLOW');
+        uint32 blockTimestamp = uint32(block.timestamp % 2**32);
+        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
+        if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
+            // * never overflows, and + overflow is desired
+            price0CumulativeLast += uint(UQ112x112.encode(_reserve1).uqdiv(_reserve0)) * timeElapsed;
+            price1CumulativeLast += uint(UQ112x112.encode(_reserve0).uqdiv(_reserve1)) * timeElapsed;
+        }
+        reserve0 = uint112(balance0);
+        reserve1 = uint112(balance1);
+        blockTimestampLast = blockTimestamp;
+        emit Sync(reserve0, reserve1);
+    }
+
+    // if fee is on, mint liquidity equivalent to 1/6th of the growth in sqrt(k)
+    function _mintFee(uint112 _reserve0, uint112 _reserve1) private returns (bool feeOn) {
+        address feeTo = IPangolinFactory(factory).feeTo();
+        feeOn = feeTo != address(0);
+        uint _kLast = kLast; // gas savings
+        if (feeOn) {
+            if (_kLast != 0) {
+                uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
+                uint rootKLast = Math.sqrt(_kLast);
+                if (rootK > rootKLast) {
+                    uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+                    uint denominator = rootK.mul(5).add(rootKLast);
+                    uint liquidity = numerator / denominator;
+                    if (liquidity > 0) _mint(feeTo, liquidity);
+                }
+            }
+        } else if (_kLast != 0) {
+            kLast = 0;
+        }
+    }
+
+    // this low-level function should be called from a contract which performs important safety checks
+    function mint(address to) external lock returns (uint liquidity) {
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        uint balance0 = IERC20(token0).balanceOf(address(this));
+        uint balance1 = IERC20(token1).balanceOf(address(this));
+        uint amount0 = balance0.sub(_reserve0);
+        uint amount1 = balance1.sub(_reserve1);
+
+        bool feeOn = _mintFee(_reserve0, _reserve1);
+        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        if (_totalSupply == 0) {
+            liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
+           _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+        } else {
+            liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
+        }
+        require(liquidity > 0, 'Pangolin: INSUFFICIENT_LIQUIDITY_MINTED');
+        _mint(to, liquidity);
+
+        _update(balance0, balance1, _reserve0, _reserve1);
+        if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+        emit Mint(msg.sender, amount0, amount1);
+    }
+
+    // this low-level function should be called from a contract which performs important safety checks
+    function burn(address to) external lock returns (uint amount0, uint amount1) {
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        address _token0 = token0;                                // gas savings
+        address _token1 = token1;                                // gas savings
+        uint balance0 = IERC20(_token0).balanceOf(address(this));
+        uint balance1 = IERC20(_token1).balanceOf(address(this));
+        uint liquidity = balanceOf[address(this)];
+
+        bool feeOn = _mintFee(_reserve0, _reserve1);
+        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
+        amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
+        require(amount0 > 0 && amount1 > 0, 'Pangolin: INSUFFICIENT_LIQUIDITY_BURNED');
+        _burn(address(this), liquidity);
+        _safeTransfer(_token0, to, amount0);
+        _safeTransfer(_token1, to, amount1);
+        balance0 = IERC20(_token0).balanceOf(address(this));
+        balance1 = IERC20(_token1).balanceOf(address(this));
+
+        _update(balance0, balance1, _reserve0, _reserve1);
+        if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
+        emit Burn(msg.sender, amount0, amount1, to);
+    }
+
+    // this low-level function should be called from a contract which performs important safety checks
+    function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external lock {
+        require(amount0Out > 0 || amount1Out > 0, 'Pangolin: INSUFFICIENT_OUTPUT_AMOUNT');
+        (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
+        require(amount0Out < _reserve0 && amount1Out < _reserve1, 'Pangolin: INSUFFICIENT_LIQUIDITY');
+
+        uint balance0;
+        uint balance1;
+        { // scope for _token{0,1}, avoids stack too deep errors
+        address _token0 = token0;
+        address _token1 = token1;
+        require(to != _token0 && to != _token1, 'Pangolin: INVALID_TO');
+        if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
+        if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
+        if (data.length > 0) IPangolinCallee(to).pangolinCall(msg.sender, amount0Out, amount1Out, data);
+        balance0 = IERC20(_token0).balanceOf(address(this));
+        balance1 = IERC20(_token1).balanceOf(address(this));
+        }
+        uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
+        uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
+        require(amount0In > 0 || amount1In > 0, 'Pangolin: INSUFFICIENT_INPUT_AMOUNT');
+        { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
+        uint balance0Adjusted = balance0.mul(1000).sub(amount0In.mul(3));
+        uint balance1Adjusted = balance1.mul(1000).sub(amount1In.mul(3));
+        require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(1000**2), 'Pangolin: K');
+        }
+
+        _update(balance0, balance1, _reserve0, _reserve1);
+        emit Swap(msg.sender, amount0In, amount1In, amount0Out, amount1Out, to);
+    }
+
+    // force balances to match reserves
+    function skim(address to) external lock {
+        address _token0 = token0; // gas savings
+        address _token1 = token1; // gas savings
+        _safeTransfer(_token0, to, IERC20(_token0).balanceOf(address(this)).sub(reserve0));
+        _safeTransfer(_token1, to, IERC20(_token1).balanceOf(address(this)).sub(reserve1));
+    }
+
+    // force reserves to match balances
+    function sync() external lock {
+        _update(IERC20(token0).balanceOf(address(this)), IERC20(token1).balanceOf(address(this)), reserve0, reserve1);
+    }
+}
+
+
+// File contracts/pangolin-core/PangolinFactory.sol
+
+pragma solidity =0.5.16;
+
+
+contract PangolinFactory is IPangolinFactory {
+    address public feeTo;
+    address public feeToSetter;
+
+    mapping(address => mapping(address => address)) public getPair;
+    address[] public allPairs;
+
+    event PairCreated(address indexed token0, address indexed token1, address pair, uint);
+
+    constructor(address _feeToSetter) public {
+        feeToSetter = _feeToSetter;
+    }
+
+    function allPairsLength() external view returns (uint) {
+        return allPairs.length;
+    }
+
+    function createPair(address tokenA, address tokenB) external returns (address pair) {
+        require(tokenA != tokenB, 'Pangolin: IDENTICAL_ADDRESSES');
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        require(token0 != address(0), 'Pangolin: ZERO_ADDRESS');
+        require(getPair[token0][token1] == address(0), 'Pangolin: PAIR_EXISTS'); // single check is sufficient
+        bytes memory bytecode = type(PangolinPair).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+        assembly {
+            pair := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        }
+        IPangolinPair(pair).initialize(token0, token1);
+        getPair[token0][token1] = pair;
+        getPair[token1][token0] = pair; // populate mapping in the reverse direction
+        allPairs.push(pair);
+        emit PairCreated(token0, token1, pair, allPairs.length);
+    }
+
+    function setFeeTo(address _feeTo) external {
+        require(msg.sender == feeToSetter, 'Pangolin: FORBIDDEN');
+        feeTo = _feeTo;
+    }
+
+    function setFeeToSetter(address _feeToSetter) external {
+        require(msg.sender == feeToSetter, 'Pangolin: FORBIDDEN');
+        feeToSetter = _feeToSetter;
     }
 }
