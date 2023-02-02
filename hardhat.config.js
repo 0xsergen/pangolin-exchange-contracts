@@ -16,7 +16,7 @@ for (const chain of Object.values(CHAINS)) {
   };
 }
 networksFromSdk["hardhat"] = {
-  chainId: 43112,
+  chainId: 9001,
   initialDate: "2021-10-10",
 };
 networksFromSdk["localhost"] = {
