@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "./PangolinStakingPositionsFunding.sol";
 
 interface ITokenMetadata {
-    function tokenURI(PangolinStakingPositions pangolinStakingPositions, uint256 tokenId)
-        external
-        view
-        returns (string memory);
+    function tokenURI(
+        PangolinStakingPositions pangolinStakingPositions,
+        uint256 tokenId
+    ) external view returns (string memory);
 }
 
 /**
@@ -52,7 +52,10 @@ interface ITokenMetadata {
  *      - `totalStaked` fits 96 bits.
  *      - `totalRewardAdded` fits 96 bits.
  */
-contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsFunding {
+contract PangolinStakingPositions is
+    ERC721Enumerable,
+    PangolinStakingPositionsFunding
+{
     struct ValueVariables {
         // The amount of tokens staked in the position or the contract.
         uint96 balance;
@@ -127,16 +130,24 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
     uint256 private _positionsLength;
 
     /** @notice The fixed denominator used for storing summations. */
-    uint256 private constant PRECISION = 2**128;
+    uint256 private constant PRECISION = 2 ** 128;
 
     /** @notice The maximum approvalPauseDuration that can be set by the admin. */
     uint256 private constant MAX_APPROVAL_PAUSE_DURATION = 2 days;
 
     /** @notice The event emitted when withdrawing or harvesting from a position. */
-    event Withdrawn(uint256 indexed positionId, uint256 indexed amount, uint256 indexed reward);
+    event Withdrawn(
+        uint256 indexed positionId,
+        uint256 indexed amount,
+        uint256 indexed reward
+    );
 
     /** @notice The event emitted when staking to, minting, or compounding a position. */
-    event Staked(uint256 indexed positionId, uint256 indexed amount, uint256 indexed reward);
+    event Staked(
+        uint256 indexed positionId,
+        uint256 indexed amount,
+        uint256 indexed reward
+    );
 
     /** @notice The event emitted when admin changes `approvalPauseDuration`. */
     event PauseDurationSet(uint256 newApprovalPauseDuration);
@@ -244,7 +255,8 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      */
     function burn(uint256 positionId) external {
         // To prevent mistakes, ensure only valueless positions can be burned.
-        if (positions[positionId].valueVariables.balance != 0) revert InvalidToken();
+        if (positions[positionId].valueVariables.balance != 0)
+            revert InvalidToken();
 
         // Burn the associated NFT and delete all position properties.
         _burn(positionId);
@@ -267,7 +279,10 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @param positionIds An array of identifiers of positions to stake to.
      * @param amounts An array of amount of tokens to stake to the corresponding positions.
      */
-    function multiStake(uint256[] calldata positionIds, uint256[] calldata amounts) external {
+    function multiStake(
+        uint256[] calldata positionIds,
+        uint256[] calldata amounts
+    ) external {
         // Update summations only once. Note that rewards accumulated when there is no one
         // staking will be lost. But this is only a small risk of value loss if a reward period
         // during no one staking is followed by staking.
@@ -293,7 +308,10 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @param positionIds An array of identifiers of positions to withdraw from.
      * @param amounts An array of amount of tokens to withdraw from corresponding positions.
      */
-    function multiWithdraw(uint256[] calldata positionIds, uint256[] calldata amounts) external {
+    function multiWithdraw(
+        uint256[] calldata positionIds,
+        uint256[] calldata amounts
+    ) external {
         // Update summations only once.
         _updateRewardSummations();
 
@@ -315,12 +333,12 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @notice External only-owner function to set how long the token approvals should be ignored.
      * @param newApprovalPauseDuration The new duration during which token approvals are ignored.
      */
-    function setApprovalPauseDuration(uint256 newApprovalPauseDuration)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setApprovalPauseDuration(
+        uint256 newApprovalPauseDuration
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         // Ensure new approvalPauseDuration is less than the max allowed.
-        if (newApprovalPauseDuration > MAX_APPROVAL_PAUSE_DURATION) revert OutOfBounds();
+        if (newApprovalPauseDuration > MAX_APPROVAL_PAUSE_DURATION)
+            revert OutOfBounds();
 
         // Update the state variable and emit an event.
         approvalPauseDuration = newApprovalPauseDuration;
@@ -331,10 +349,9 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @notice External only-owner function to change the contract that constructs tokenURIs.
      * @param newTokenMetadata The addresses of the new contract address that constructs tokenURIs.
      */
-    function setTokenMetadata(ITokenMetadata newTokenMetadata)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function setTokenMetadata(
+        ITokenMetadata newTokenMetadata
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         tokenMetadata = newTokenMetadata;
         emit TokenMetadataSet(newTokenMetadata);
     }
@@ -348,13 +365,18 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @param positionId The identifier of the position to check the reward rate of.
      * @return The rewards per second of the position.
      */
-    function positionRewardRate(uint256 positionId) external view returns (uint256) {
+    function positionRewardRate(
+        uint256 positionId
+    ) external view returns (uint256) {
         // Get totalValue and positionValue.
         uint256 totalValue = _getValue(totalValueVariables);
         uint256 positionValue = _getValue(positions[positionId].valueVariables);
 
         // Return the rewardRate of the position. Do not revert if totalValue is zero.
-        return positionValue == 0 ? 0 : (rewardRate() * positionValue) / totalValue;
+        return
+            positionValue == 0
+                ? 0
+                : (rewardRate() * positionValue) / totalValue;
     }
 
     /**
@@ -363,13 +385,19 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @param positionId The identifier of the position to check the accrued rewards of.
      * @return The amount of rewards that have been accrued in the position.
      */
-    function positionPendingRewards(uint256 positionId) external view returns (uint256) {
+    function positionPendingRewards(
+        uint256 positionId
+    ) external view returns (uint256) {
         // Create a storage pointer for the position.
         Position storage position = positions[positionId];
 
         // Get the delta of summations. Use incremented `rewardSummationsStored` based on the
         // pending rewards.
-        RewardSummations memory deltaRewardSummations = _getDeltaRewardSummations(position, true);
+        RewardSummations
+            memory deltaRewardSummations = _getDeltaRewardSummations(
+                position,
+                true
+            );
 
         // Return the pending rewards of the position based on the difference in rewardSummations.
         return _earned(deltaRewardSummations, position);
@@ -387,7 +415,10 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      *      - Make the staking duration of `reward` tokens start from zero.
      *      - Do not make the staking duration of the existing `balance` restart,
      */
-    function _stake(uint256 positionId, uint256 amount) private onlyOwner(positionId) {
+    function _stake(
+        uint256 positionId,
+        uint256 amount
+    ) private onlyOwner(positionId) {
         // Create a storage pointer for the position.
         Position storage position = positions[positionId];
 
@@ -409,7 +440,8 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
             totalValueVariables.balance = uint96(newTotalStaked);
 
             // Increment the position properties pertaining to position value calculation.
-            ValueVariables storage positionValueVariables = position.valueVariables;
+            ValueVariables storage positionValueVariables = position
+                .valueVariables;
             uint256 oldBalance = positionValueVariables.balance;
             positionValueVariables.balance = uint96(oldBalance + totalAmount);
             positionValueVariables.sumOfEntryTimes += addedEntryTimes;
@@ -440,7 +472,10 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      *      - Make the staking duration of the remaining `balance` restart,
      *      - Ignore NFT spending approvals for a duration set by the admin.
      */
-    function _withdraw(uint256 positionId, uint256 amount) private onlyOwner(positionId) {
+    function _withdraw(
+        uint256 positionId,
+        uint256 amount
+    ) private onlyOwner(positionId) {
         // Create a storage pointer for the position.
         Position storage position = positions[positionId];
 
@@ -462,7 +497,8 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
 
             // Update sumOfEntryTimes.
             uint256 newEntryTimes = block.timestamp * remaining;
-            ValueVariables storage positionValueVariables = position.valueVariables;
+            ValueVariables storage positionValueVariables = position
+                .valueVariables;
             totalValueVariables.sumOfEntryTimes = uint160(
                 totalValueVariables.sumOfEntryTimes +
                     newEntryTimes -
@@ -499,13 +535,15 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      */
     function _emergencyExit(uint256 positionId) private onlyOwner(positionId) {
         // Move the queried position to memory.
-        ValueVariables memory positionValueVariables = positions[positionId].valueVariables;
+        ValueVariables memory positionValueVariables = positions[positionId]
+            .valueVariables;
 
         // Decrement the state variables pertaining to total value calculation.
         uint96 balance = positionValueVariables.balance;
         unchecked {
             totalValueVariables.balance -= balance;
-            totalValueVariables.sumOfEntryTimes -= positionValueVariables.sumOfEntryTimes;
+            totalValueVariables.sumOfEntryTimes -= positionValueVariables
+                .sumOfEntryTimes;
         }
 
         // Simply destroy the position.
@@ -551,10 +589,16 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @param position The properties of the position.
      * @return The accrued rewards of the position.
      */
-    function _positionPendingRewards(Position storage position) private view returns (uint256) {
+    function _positionPendingRewards(
+        Position storage position
+    ) private view returns (uint256) {
         // Get the change in summations since the position was last updated. When calculating
         // the delta, do not increment `rewardSummationsStored`, as they had to be updated anyways.
-        RewardSummations memory deltaRewardSummations = _getDeltaRewardSummations(position, false);
+        RewardSummations
+            memory deltaRewardSummations = _getDeltaRewardSummations(
+                position,
+                false
+            );
 
         // Return the pending rewards of the position.
         return _earned(deltaRewardSummations, position);
@@ -568,16 +612,16 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      *                  rewards of the contract.
      * @return The difference between the `rewardSummationsStored` and `rewardSummationsPaid`.
      */
-    function _getDeltaRewardSummations(Position storage position, bool increment)
-        private
-        view
-        returns (RewardSummations memory)
-    {
+    function _getDeltaRewardSummations(
+        Position storage position,
+        bool increment
+    ) private view returns (RewardSummations memory) {
         // If position had no update to its summations yet, return zero.
         if (position.lastUpdate == 0) return RewardSummations(0, 0);
 
         // Create storage pointer to the position’s summations.
-        RewardSummations storage rewardSummationsPaid = position.rewardSummationsPaid;
+        RewardSummations storage rewardSummationsPaid = position
+            .rewardSummationsPaid;
 
         // If requested, return the incremented `rewardSummationsStored`.
         if (increment) {
@@ -605,8 +649,10 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
         // Otherwise just return the the delta, ignoring any incrementation from pending rewards.
         return
             RewardSummations(
-                rewardSummationsStored.idealPosition - rewardSummationsPaid.idealPosition,
-                rewardSummationsStored.rewardPerValue - rewardSummationsPaid.rewardPerValue
+                rewardSummationsStored.idealPosition -
+                    rewardSummationsPaid.idealPosition,
+                rewardSummationsStored.rewardPerValue -
+                    rewardSummationsPaid.rewardPerValue
             );
     }
 
@@ -617,15 +663,22 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @return idealPositionIncrementation The incrementation to make to the idealPosition.
      * @return rewardPerValueIncrementation The incrementation to make to the rewardPerValue.
      */
-    function _getRewardSummationsIncrementations(uint256 rewards)
+    function _getRewardSummationsIncrementations(
+        uint256 rewards
+    )
         private
         view
-        returns (uint256 idealPositionIncrementation, uint256 rewardPerValueIncrementation)
+        returns (
+            uint256 idealPositionIncrementation,
+            uint256 rewardPerValueIncrementation
+        )
     {
         // Calculate the totalValue, then get the incrementations only if value is non-zero.
         uint256 totalValue = _getValue(totalValueVariables);
         if (totalValue != 0) {
-            idealPositionIncrementation = (rewards * block.timestamp * PRECISION) / totalValue;
+            idealPositionIncrementation =
+                (rewards * block.timestamp * PRECISION) /
+                totalValue;
             rewardPerValueIncrementation = (rewards * PRECISION) / totalValue;
         }
     }
@@ -639,8 +692,13 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      *      below is intuitive and simple to derive. We will leave proving it to the reader.
      * @return The total value of contract or a position.
      */
-    function _getValue(ValueVariables storage valueVariables) private view returns (uint256) {
-        return block.timestamp * valueVariables.balance - valueVariables.sumOfEntryTimes;
+    function _getValue(
+        ValueVariables storage valueVariables
+    ) private view returns (uint256) {
+        return
+            block.timestamp *
+            valueVariables.balance -
+            valueVariables.sumOfEntryTimes;
     }
 
     /**
@@ -649,19 +707,20 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
      * @param position The position to check the accrued rewards of.
      * @return The accrued rewards of the position.
      */
-    function _earned(RewardSummations memory deltaRewardSummations, Position storage position)
-        private
-        view
-        returns (uint256)
-    {
+    function _earned(
+        RewardSummations memory deltaRewardSummations,
+        Position storage position
+    ) private view returns (uint256) {
         // Refer to the Combined Position section of the Proofs on why and how this formula works.
         return
             position.lastUpdate == 0
                 ? 0
                 : (((deltaRewardSummations.idealPosition -
-                    (deltaRewardSummations.rewardPerValue * position.lastUpdate)) *
+                    (deltaRewardSummations.rewardPerValue *
+                        position.lastUpdate)) *
                     position.valueVariables.balance) +
-                    (deltaRewardSummations.rewardPerValue * position.previousValues)) / PRECISION;
+                    (deltaRewardSummations.rewardPerValue *
+                        position.previousValues)) / PRECISION;
     }
 
     /* *********************** */
@@ -700,21 +759,26 @@ contract PangolinStakingPositions is ERC721Enumerable, PangolinStakingPositionsF
     ) internal override {
         // Ignore approvals for a period following a destructive action.
         if (msg.sender != from) {
-            uint256 pausedUntil = positions[tokenId].lastDevaluation + approvalPauseDuration;
+            uint256 pausedUntil = positions[tokenId].lastDevaluation +
+                approvalPauseDuration;
             if (block.timestamp <= pausedUntil) revert TooEarly();
         }
 
         super._beforeTokenTransfer(from, to, tokenId, batchSize);
     }
 
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+    function tokenURI(
+        uint256 tokenId
+    ) public view override returns (string memory) {
         ERC721._requireMinted(tokenId);
 
         // Use external contract to handle token metadata.
         return tokenMetadata.tokenURI(this, tokenId);
     }
 
-    function supportsInterface(bytes4 interfaceId)
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         override(ERC721Enumerable, AccessControlEnumerable)

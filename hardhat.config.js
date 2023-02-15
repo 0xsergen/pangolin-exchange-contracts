@@ -23,7 +23,7 @@ networksFromSdk["localhost"] = {
   accounts: [process.env.PRIVATE_KEY],
   forking: {
     enabled: true,
-    url: "https://eth.bd.evmos.org:8545",
+    url: "https://sgb.ftso.com.au/ext/bc/C/rpc",
     accounts: [process.env.PRIVATE_KEY],
   },
 };
