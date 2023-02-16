@@ -12,13 +12,16 @@ async function main() {
   // CHANGE THESE VARIABLES //
   ////////////////////////////
   const contractAddresses = CHAINS[ChainId.FUJI].contracts;
-  const errorCheckActive = false;
+  const errorCheckActive = true;
   const chefFundForwarder = {
     address: "0x0000000000000000000000000000000000000000",
-  }; // GET CHEF FUND FORWARDER ADDRESS FROM SDK, THIS IS JUST FOR NOT GETTING ERROR WHILE DEPLOYMENT
+  }; // GET ADDRESS FROM JSON, THIS IS JUST FOR NOT GETTING ERROR WHILE DEPLOYMENT
   const staking = {
     address: "0x0000000000000000000000000000000000000000",
-  };
+  }; // GET ADDRESS FROM JSON, THIS IS JUST FOR NOT GETTING ERROR WHILE DEPLOYMENT
+  const stakingFundForwarder = {
+    address: "0x0000000000000000000000000000000000000000",
+  }; // GET ADDRESS FROM JSON, THIS IS JUST FOR NOT GETTING ERROR WHILE DEPLOYMENT
   ////////////////////////////
 
   // REQUIRED CONTRACT DEFINITION
@@ -155,7 +158,7 @@ async function main() {
   // tx data to set reward contract on FeeCollector via multisig
   const feeCollectorTxEncode =
     feeCollectorContract.interface.encodeFunctionData("setRewardsContract", [
-      staking.address,
+      stakingFundForwarder.address,
     ]);
 
   multisigTxData = {
