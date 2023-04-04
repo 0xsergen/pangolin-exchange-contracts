@@ -1,0 +1,19 @@
+{
+  "_format": "hh-zksolc-artifact-1",
+  "contractName": "IWAVAX",
+  "sourceName": "contracts/staking-positions/interfaces/IWAVAX.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "deposit",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "factoryDeps": {}
+}
