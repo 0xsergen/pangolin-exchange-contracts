@@ -31,10 +31,10 @@ subtask(
 
 module.exports = {
   zksolc: {
-    version: "1.3.4",
+    version: "1.3.8",
     compilerSource: "binary",
     settings: {
-      isSystem: true,
+      isSystem: false,
     },
   },
   defaultNetwork: "zksync_testnet_goerli",
@@ -42,7 +42,7 @@ module.exports = {
   networks: {
     zksync_testnet_goerli: {
       accounts: [process.env.PRIVATE_KEY],
-      url: "https://zksync2-testnet.zksync.dev",
+      url: "https://testnet.era.zksync.dev",
       ethNetwork: "goerli",
       zksync: true,
       verifyURL:

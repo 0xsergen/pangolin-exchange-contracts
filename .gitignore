@@ -1,6 +1,8 @@
 cache/
+cache-zk/
 node_modules/
 artifacts/
+artifacts-zk/
 .secret.env
 .env
 .idea
