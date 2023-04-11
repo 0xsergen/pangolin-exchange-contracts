@@ -5,7 +5,7 @@ require("dotenv").config();
 const { ROUTER, TOKEN } = require("../abi/abi.json");
 
 async function main() {
-  const routerAddress = "0xE7c10f781732D7e7b113FE85534D1Ac6b4e332bA"; // zkSync Testnet Pangolin Router
+  const routerAddress = "0xDF0620DA2C36c1a350E4C285D26790CE46cb5C04"; // zkSync Testnet Pangolin Router
   const token0Address = "0x3e7676937A7E96CFB7616f255b9AD9FF47363D4b"; // DAI Token on zkSync Testnet
   const token1Address = "0x40609141Db628BeEE3BfAB8034Fc2D8278D0Cc78"; // LINK Token on zkSync Testnet
   const rpc = "https://zksync2-testnet.zksync.dev";

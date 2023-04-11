@@ -6,7 +6,6 @@ const { FOUNDATION_MULTISIG } = require("../constants/shared.js");
 const {
   USE_GNOSIS_SAFE,
   WRAPPED_NATIVE_TOKEN,
-  TIMELOCK_DELAY,
 } = require(`../constants/${network.name}.js`);
 require("dotenv").config();
 require("hardhat/types"); // hre
