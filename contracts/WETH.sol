@@ -40,7 +40,8 @@ contract WETH {
     function withdraw(uint wad) public {
         require(balanceOf[msg.sender] >= wad);
         balanceOf[msg.sender] -= wad;
-        address(msg.sender).call{value: wad}("");
+        (bool success, ) = address(msg.sender).call{value: wad}("");
+        require(success, "WITHDRAW_FAILED");
         emit Withdrawal(msg.sender, wad);
     }
 
