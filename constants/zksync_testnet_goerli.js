@@ -1,4 +1,5 @@
-exports.WRAPPED_NATIVE_TOKEN;
+const WETH = "0xa11Df3882867886248c8643C47094C2AB769b3Be";
+exports.WRAPPED_NATIVE_TOKEN = WETH;
 exports.PNG_SYMBOL = "PZKS";
 exports.PNG_NAME = "Pangolin ZKSync";
 exports.TOTAL_SUPPLY = 230000000; // two-hundred-and-thirty million.
@@ -10,7 +11,8 @@ exports.WETH_PNG_FARM_ALLOCATION = 3000; // 30x weight
 exports.START_VESTING = false;
 exports.LINEAR_VESTING = true;
 exports.VESTING_COUNT = 900; // 30 months == 900 days.
-exports.AIRDROP_MERKLE_ROOT = "0x0000000000000000000000000000000000000000000000000000000000000000";
+exports.AIRDROP_MERKLE_ROOT =
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
 exports.VESTER_ALLOCATIONS = [
   {
     recipient: "treasury", // community treasury
@@ -23,6 +25,5 @@ exports.VESTER_ALLOCATIONS = [
   {
     recipient: "chef", // MiniChef
     allocation: 6559, // 61% LPs & PNG Staking
-  }
+  },
 ];
-

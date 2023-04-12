@@ -96,14 +96,18 @@ async function main() {
 
   // Deploy WAVAX if not defined
   if (WRAPPED_NATIVE_TOKEN === undefined) {
-    var nativeToken = (await deploy("WAVAX", [])).address;
+    if (isZksync) {
+      var nativeToken = (await deploy("WETH", [])).address;
+    } else {
+      var nativeToken = (await deploy("WAVAX", [])).address;
+    }
   } else {
     var nativeToken = WRAPPED_NATIVE_TOKEN;
     console.log(nativeToken, ": WAVAX");
   }
 
   // Deploy Multicall
-  const multicall = await deploy("Multicall2", []);
+  await deploy("Multicall2", []);
 
   /**************
    * GOVERNANCE *
@@ -129,7 +133,6 @@ async function main() {
 
   const factory = await deploy("PangolinFactory", [deployer.address]);
   await deploy("PangolinRouter", [factory.address, nativeToken]);
-  await deploy("Multicall2", []);
 
   console.log("\n===============\n CONFIGURATION \n===============");
 

@@ -44,7 +44,7 @@ library PangolinLibrary8 {
                             hex"ff",
                             factory,
                             keccak256(abi.encodePacked(token0, token1)),
-                            hex"40231f6b438bce0797c9ada29b718a87ea0a5cea3fe9a771abdd76bd41a3e545" // init code hash
+                            hex"93c2cd2311f91268664d40023e68dd3cc75bb32733ce9c5966a82f4d5884d4ef" // init code hash
                         )
                     )
                 )
